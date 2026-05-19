@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id             String       @id @default(cuid())
+  name           String
+  email          String       @unique
+  passwordHash   String
+  role           String       @default("team")
+  mustChangePass Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  assignments    Assignment[]
+  comments       Comment[]
+}
+
+model RawOrderRow {
+  id               String  @id @default(cuid())
+  salesOrderNumber String  @unique
+  customerName     String
+  postcode         String
+  contactName      String
+  primaryEmail     String?
+  secondaryEmail   String?
+  orderValue       Float
+  orderDate        String
+
+  @@index([customerName, postcode])
+}
+
+model Assignment {
+  customerId String   @id
+  userId     String
+  assignedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  customerId String
+  userId     String
+  text       String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
