@@ -5,7 +5,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Customer Churn Dashboard',
+  title: 'Customer Insights Dashboard',
   description: 'Monitor customer ordering patterns and identify churn risk',
 };
 
