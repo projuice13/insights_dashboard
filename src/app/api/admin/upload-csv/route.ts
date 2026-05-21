@@ -4,6 +4,9 @@ import { prisma } from '@/lib/db';
 import { buildCustomers } from '@/lib/dataTransforms';
 import { RawOrder } from '@/lib/types';
 
+// Allow up to 60 s on Vercel (Pro) / 10 s on Hobby — prevents timeout blank screens
+export const maxDuration = 60;
+
 async function requireAdmin() {
   const session = await getSession();
   if (!session || session.role !== 'admin') return null;
