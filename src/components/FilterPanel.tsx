@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { CustomerTypeFilter, RegionFilter, SpendFilter } from '@/lib/types';
+import { CustomerTypeFilter, RegionFilter, SpendFilter, DeactivationView } from '@/lib/types';
 import DateRangePicker, { DateRange } from './DateRangePicker';
 
 type RiskLevel = 'high' | 'medium' | 'low';
@@ -34,7 +34,7 @@ interface FilterPanelProps {
   isTeam?: boolean;
   hideAssigned: boolean;
   assignedToMe?: boolean;
-  showDeactivated?: boolean;
+  deactivationView?: DeactivationView;
 
   onCustomerType: (v: CustomerTypeFilter) => void;
   onRegion: (v: RegionFilter) => void;
@@ -43,7 +43,7 @@ interface FilterPanelProps {
   onRiskToggle: (v: RiskLevel) => void;
   onHideAssigned: (v: boolean) => void;
   onAssignedToMe?: (v: boolean) => void;
-  onShowDeactivated?: (v: boolean) => void;
+  onDeactivationView?: (v: DeactivationView) => void;
 }
 
 const selectClass =
@@ -63,7 +63,7 @@ export default function FilterPanel({
   isTeam = false,
   hideAssigned,
   assignedToMe = true,
-  showDeactivated = false,
+  deactivationView = 'active',
   onCustomerType,
   onRegion,
   onLastOrdered,
@@ -71,7 +71,7 @@ export default function FilterPanel({
   onRiskToggle,
   onHideAssigned,
   onAssignedToMe,
-  onShowDeactivated,
+  onDeactivationView,
 }: FilterPanelProps) {
   // Prevent body scroll while panel is open
   useEffect(() => {
@@ -222,17 +222,30 @@ export default function FilterPanel({
               </label>
             )}
 
-            {/* Show deactivated — admin only */}
-            {!isTeam && onShowDeactivated && (
-              <label className="flex cursor-pointer items-center gap-2.5">
-                <input
-                  type="checkbox"
-                  checked={showDeactivated}
-                  onChange={(e) => onShowDeactivated(e.target.checked)}
-                  className="h-3.5 w-3.5 cursor-pointer rounded border-[#D1D5DB] text-[#374151] focus:ring-0"
-                />
-                <span className="text-sm text-[#374151]">Show deactivated</span>
-              </label>
+            {/* Deactivation view — admin only */}
+            {!isTeam && onDeactivationView && (
+              <div>
+                <p className="mb-2 text-xs font-medium text-[#6B7280]">Customer status</p>
+                <div className="flex rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] p-0.5">
+                  {([
+                    { value: 'active', label: 'Active' },
+                    { value: 'all', label: 'All' },
+                    { value: 'deactivated', label: 'Deactivated' },
+                  ] as { value: DeactivationView; label: string }[]).map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => onDeactivationView(opt.value)}
+                      className={`flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs font-medium transition-all ${
+                        deactivationView === opt.value
+                          ? 'bg-white text-[#111827] shadow-sm ring-1 ring-[#E5E7EB]'
+                          : 'text-[#6B7280] hover:text-[#374151]'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>

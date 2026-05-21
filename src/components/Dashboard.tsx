@@ -11,6 +11,7 @@ import {
   AdminUser,
   Deactivations,
   AppNotification,
+  DeactivationView,
 } from '@/lib/types';
 import { DateRange } from './DateRangePicker';
 import SummaryBar from './SummaryBar';
@@ -63,7 +64,7 @@ export default function Dashboard({
   const [riskLevels, setRiskLevels] = useState<Set<'high' | 'medium' | 'low'>>(new Set());
   const [hideAssigned, setHideAssigned] = useState(false);
   const [assignedToMe, setAssignedToMe] = useState(true); // team default: on
-  const [showDeactivated, setShowDeactivated] = useState(false);
+  const [deactivationView, setDeactivationView] = useState<DeactivationView>('active');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [activeCustomer, setActiveCustomer] = useState<Customer | null>(null);
@@ -95,9 +96,9 @@ export default function Dashboard({
     if (riskLevels.size > 0) count++;
     if (!isTeam && hideAssigned) count++;
     if (isTeam && !assignedToMe) count++;
-    if (!isTeam && showDeactivated) count++;
+    if (!isTeam && deactivationView !== 'active') count++;
     return count;
-  }, [customerType, region, lastOrdered, spend, riskLevels, hideAssigned, assignedToMe, isTeam, showDeactivated]);
+  }, [customerType, region, lastOrdered, spend, riskLevels, hideAssigned, assignedToMe, isTeam, deactivationView]);
 
   const handleClearAllFilters = useCallback(() => {
     setCustomerType('standard');
@@ -107,7 +108,7 @@ export default function Dashboard({
     setRiskLevels(new Set());
     setHideAssigned(false);
     setAssignedToMe(true);
-    setShowDeactivated(false);
+    setDeactivationView('active');
     resetSelection();
   }, []);
 
@@ -116,9 +117,16 @@ export default function Dashboard({
       if (c.customerType !== customerType) return false;
       if (region !== 'all' && c.contactName.toLowerCase() !== region.toLowerCase()) return false;
 
-      // Hide fully deactivated customers unless admin has toggled "Show deactivated"
+      // Deactivation filter (admin only; teams always see active behavior)
       const deactivationStatus = deactivations[c.id]?.status;
-      if (deactivationStatus === 'active' && !showDeactivated) return false;
+      if (!isTeam) {
+        if (deactivationView === 'active' && deactivationStatus === 'active') return false;
+        if (deactivationView === 'deactivated' && deactivationStatus !== 'active') return false;
+        // 'all' shows everything
+      } else {
+        // Team users always see only non-deactivated customers
+        if (deactivationStatus === 'active') return false;
+      }
 
       // Team: "Assigned to me" filter
       if (isTeam && assignedToMe && !myAssignedSet.has(c.id)) return false;
@@ -148,7 +156,7 @@ export default function Dashboard({
     });
   }, [customers, customerType, region, lastOrdered, spend, riskLevels,
       hideAssigned, assignedToMe, isTeam, myAssignedSet, assignments,
-      deactivations, showDeactivated]);
+      deactivations, deactivationView]);
 
   const searched = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -404,7 +412,7 @@ export default function Dashboard({
         isTeam={isTeam}
         hideAssigned={hideAssigned}
         assignedToMe={assignedToMe}
-        showDeactivated={showDeactivated}
+        deactivationView={deactivationView}
         onCustomerType={(v) => { setCustomerType(v); resetSelection(); }}
         onRegion={(v) => { setRegion(v); resetSelection(); }}
         onLastOrdered={(v) => { setLastOrdered(v); resetSelection(); }}
@@ -412,7 +420,7 @@ export default function Dashboard({
         onRiskToggle={handleRiskToggle}
         onHideAssigned={(v) => { setHideAssigned(v); resetSelection(); }}
         onAssignedToMe={(v) => { setAssignedToMe(v); resetSelection(); }}
-        onShowDeactivated={(v) => { setShowDeactivated(v); resetSelection(); }}
+        onDeactivationView={(v) => { setDeactivationView(v); resetSelection(); }}
       />
     </div>
   );

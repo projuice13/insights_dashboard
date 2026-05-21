@@ -121,3 +121,5 @@ export type CustomerTypeFilter = 'standard' | 'volume';
 export type RegionFilter = string; // 'all' or a specific contact name value
 export type SpendFilter = 'all' | '0-999' | '1000-1999' | '2000+';
 export type HideAssignedFilter = boolean;
+// 'active' = hide deactivated (default), 'all' = show both, 'deactivated' = only deactivated
+export type DeactivationView = 'active' | 'all' | 'deactivated';
