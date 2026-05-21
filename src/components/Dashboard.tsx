@@ -252,7 +252,7 @@ export default function Dashboard({
       <header className="border-b border-[#E5E7EB] bg-white px-6 py-4">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold text-[#111827] tracking-tight">
-            Customer Churn Dashboard
+            Customer Insights Dashboard
           </h1>
           <div className="flex items-center gap-2">
             <NotificationsMenu
