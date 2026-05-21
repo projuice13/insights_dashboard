@@ -79,7 +79,9 @@ export default function UsersClient({ initialUsers }: Props) {
   };
 
   const handleResetPassword = async (userId: string, userName: string) => {
-    if (!confirm(`Reset password for ${userName}? They'll be forced to set a new one on next login.`)) return;
+    if (!confirm(
+      `Generate a new password for ${userName}?\n\nYou'll be shown the new password once so you can pass it on to them. They will then use it to log in, and be prompted to change it to one of their own.`,
+    )) return;
     setResettingId(userId);
 
     const res = await fetch(`/api/admin/users/${userId}/reset-password`, { method: 'POST' });
@@ -123,7 +125,7 @@ export default function UsersClient({ initialUsers }: Props) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-6 py-8 space-y-8">
+      <main className="mx-auto max-w-4xl px-6 py-8 space-y-8">
         {/* Existing users */}
         <div>
           <h2 className="mb-3 text-sm font-semibold text-[#374151]">Team members</h2>
@@ -173,7 +175,7 @@ export default function UsersClient({ initialUsers }: Props) {
                           disabled={resettingId === u.id}
                           className="cursor-pointer text-[13px] text-[#6B7280] hover:text-[#374151] disabled:opacity-40"
                         >
-                          {resettingId === u.id ? 'Resetting…' : 'Reset password'}
+                          {resettingId === u.id ? 'Generating…' : 'New password'}
                         </button>
                         <span className="mx-2 text-[#D1D5DB]">·</span>
                         <button
@@ -256,7 +258,8 @@ export default function UsersClient({ initialUsers }: Props) {
               Temporary password
             </h3>
             <p className="mt-2 text-sm text-[#6B7280]">
-              Share this password with <strong>{newPassword.name}</strong>. It will only be shown once.
+              Share this password with <strong>{newPassword.name}</strong> so they can sign in.
+              It will only be shown once — copy it now.
             </p>
             <div className="mt-3 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3">
               <code className="text-sm font-mono font-semibold text-[#111827] select-all">
