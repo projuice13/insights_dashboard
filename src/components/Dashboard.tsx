@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Customer,
   CustomerTypeFilter,
@@ -8,6 +9,8 @@ import {
   SpendFilter,
   Assignments,
   AdminUser,
+  Deactivations,
+  AppNotification,
 } from '@/lib/types';
 import { DateRange } from './DateRangePicker';
 import SummaryBar from './SummaryBar';
@@ -16,6 +19,8 @@ import CustomerTable from './CustomerTable';
 import SidePanel from './SidePanel';
 import SelectionActionBar from './SelectionActionBar';
 import SettingsMenu from './SettingsMenu';
+import NotificationsMenu from './NotificationsMenu';
+import DeactivateModal from './DeactivateModal';
 
 interface DashboardProps {
   customers: Customer[];
@@ -23,6 +28,8 @@ interface DashboardProps {
   users: AdminUser[];
   currentUser: { id: string; name: string };
   initialCustomersWithComments: string[];
+  deactivations: Deactivations;
+  notifications: AppNotification[];
   // Admin-only — omit these for team users
   importStats?: { imported: number; skipped: number } | null;
   myAssignedIds?: string[]; // team users only — the IDs assigned to them
@@ -37,13 +44,17 @@ export default function Dashboard({
   users,
   currentUser,
   initialCustomersWithComments,
+  deactivations,
+  notifications,
   importStats,
   myAssignedIds,
   onAssign,
   onImport,
   onReset,
 }: DashboardProps) {
+  const router = useRouter();
   const isTeam = myAssignedIds !== undefined;
+  const isAdmin = !isTeam;
 
   const [customerType, setCustomerType] = useState<CustomerTypeFilter>('standard');
   const [region, setRegion] = useState<RegionFilter>('all');
@@ -52,10 +63,12 @@ export default function Dashboard({
   const [riskLevels, setRiskLevels] = useState<Set<'high' | 'medium' | 'low'>>(new Set());
   const [hideAssigned, setHideAssigned] = useState(false);
   const [assignedToMe, setAssignedToMe] = useState(true); // team default: on
+  const [showDeactivated, setShowDeactivated] = useState(false);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [activeCustomer, setActiveCustomer] = useState<Customer | null>(null);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [deactivatingCustomer, setDeactivatingCustomer] = useState<Customer | null>(null);
   const [customersWithComments, setCustomersWithComments] = useState<Set<string>>(
     () => new Set(initialCustomersWithComments),
   );
@@ -82,8 +95,9 @@ export default function Dashboard({
     if (riskLevels.size > 0) count++;
     if (!isTeam && hideAssigned) count++;
     if (isTeam && !assignedToMe) count++;
+    if (!isTeam && showDeactivated) count++;
     return count;
-  }, [customerType, region, lastOrdered, spend, riskLevels, hideAssigned, assignedToMe, isTeam]);
+  }, [customerType, region, lastOrdered, spend, riskLevels, hideAssigned, assignedToMe, isTeam, showDeactivated]);
 
   const handleClearAllFilters = useCallback(() => {
     setCustomerType('standard');
@@ -93,6 +107,7 @@ export default function Dashboard({
     setRiskLevels(new Set());
     setHideAssigned(false);
     setAssignedToMe(true);
+    setShowDeactivated(false);
     resetSelection();
   }, []);
 
@@ -100,6 +115,10 @@ export default function Dashboard({
     return customers.filter((c) => {
       if (c.customerType !== customerType) return false;
       if (region !== 'all' && c.contactName.toLowerCase() !== region.toLowerCase()) return false;
+
+      // Hide fully deactivated customers unless admin has toggled "Show deactivated"
+      const deactivationStatus = deactivations[c.id]?.status;
+      if (deactivationStatus === 'active' && !showDeactivated) return false;
 
       // Team: "Assigned to me" filter
       if (isTeam && assignedToMe && !myAssignedSet.has(c.id)) return false;
@@ -128,7 +147,8 @@ export default function Dashboard({
       return true;
     });
   }, [customers, customerType, region, lastOrdered, spend, riskLevels,
-      hideAssigned, assignedToMe, isTeam, myAssignedSet, assignments]);
+      hideAssigned, assignedToMe, isTeam, myAssignedSet, assignments,
+      deactivations, showDeactivated]);
 
   const searched = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -188,6 +208,37 @@ export default function Dashboard({
     });
   }, []);
 
+  // Deactivation handlers
+  const handleConfirmDeactivate = useCallback(
+    async (reason: string) => {
+      if (!deactivatingCustomer) return;
+      const res = await fetch(`/api/customers/${deactivatingCustomer.id}/deactivate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason, customerName: deactivatingCustomer.name }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? 'Deactivation failed.');
+      }
+      setDeactivatingCustomer(null);
+      setActiveCustomer(null);
+      router.refresh();
+    },
+    [deactivatingCustomer, router],
+  );
+
+  const handleReactivate = useCallback(
+    async (customer: Customer) => {
+      const res = await fetch(`/api/customers/${customer.id}/reactivate`, { method: 'POST' });
+      if (res.ok) {
+        setActiveCustomer(null);
+        router.refresh();
+      }
+    },
+    [router],
+  );
+
   return (
     <div className="min-h-screen bg-[#F9FAFB]">
       <header className="border-b border-[#E5E7EB] bg-white px-6 py-4">
@@ -195,12 +246,20 @@ export default function Dashboard({
           <h1 className="text-lg font-semibold text-[#111827] tracking-tight">
             Customer Churn Dashboard
           </h1>
-          <SettingsMenu
-            currentUser={currentUser}
-            isTeam={isTeam}
-            onImport={onImport}
-            onReset={onReset}
-          />
+          <div className="flex items-center gap-2">
+            <NotificationsMenu
+              initialNotifications={notifications}
+              customers={customers}
+              isAdmin={isAdmin}
+              onOpenCustomer={setActiveCustomer}
+            />
+            <SettingsMenu
+              currentUser={currentUser}
+              isTeam={isTeam}
+              onImport={onImport}
+              onReset={onReset}
+            />
+          </div>
         </div>
         <div className="mt-4">
           <SummaryBar customers={customers} />
@@ -300,6 +359,7 @@ export default function Dashboard({
           users={users}
           customersWithComments={customersWithComments}
           isTeam={isTeam}
+          deactivations={deactivations}
           onSelect={handleSelect}
           onSelectAll={handleSelectAll}
           onClearAll={resetSelection}
@@ -315,7 +375,20 @@ export default function Dashboard({
         hasComments={activeCustomer ? customersWithComments.has(activeCustomer.id) : false}
         onCommentAdded={handleCommentAdded}
         onAllCommentsDeleted={handleAllCommentsDeleted}
+        deactivation={activeCustomer ? deactivations[activeCustomer.id] ?? null : null}
+        isAdmin={isAdmin}
+        onDeactivate={setDeactivatingCustomer}
+        onReactivate={handleReactivate}
       />
+
+      {deactivatingCustomer && (
+        <DeactivateModal
+          customerName={deactivatingCustomer.name}
+          isTeam={isTeam}
+          onClose={() => setDeactivatingCustomer(null)}
+          onConfirm={handleConfirmDeactivate}
+        />
+      )}
 
       <FilterPanel
         isOpen={filterPanelOpen}
@@ -331,6 +404,7 @@ export default function Dashboard({
         isTeam={isTeam}
         hideAssigned={hideAssigned}
         assignedToMe={assignedToMe}
+        showDeactivated={showDeactivated}
         onCustomerType={(v) => { setCustomerType(v); resetSelection(); }}
         onRegion={(v) => { setRegion(v); resetSelection(); }}
         onLastOrdered={(v) => { setLastOrdered(v); resetSelection(); }}
@@ -338,6 +412,7 @@ export default function Dashboard({
         onRiskToggle={handleRiskToggle}
         onHideAssigned={(v) => { setHideAssigned(v); resetSelection(); }}
         onAssignedToMe={(v) => { setAssignedToMe(v); resetSelection(); }}
+        onShowDeactivated={(v) => { setShowDeactivated(v); resetSelection(); }}
       />
     </div>
   );

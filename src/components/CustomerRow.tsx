@@ -11,6 +11,7 @@ interface CustomerRowProps {
   hasComments: boolean;
   users: AdminUser[];
   isTeam?: boolean;
+  deactivationStatus?: 'pending' | 'active' | null;
   onSelect: (id: string, shiftKey: boolean) => void;
   onClick: (customer: Customer) => void;
   onReassign: (id: string, userId: string | null) => void;
@@ -31,6 +32,7 @@ export default function CustomerRow({
   hasComments,
   users,
   isTeam = false,
+  deactivationStatus = null,
   onSelect,
   onClick,
   onReassign,
@@ -70,15 +72,33 @@ export default function CustomerRow({
         <RiskBadge riskLevel={customer.riskLevel} gapRatio={customer.gapRatio} compact />
       </td>
       <td className="py-3 px-3">
-        <button
-          onClick={() => onClick(customer)}
-          className="cursor-pointer inline-flex items-center gap-1.5 text-[13px] font-medium text-[#111827] hover:text-[#374151] hover:underline text-left"
-        >
-          {customer.name}
-          {hasComments && (
-            <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#FBB03F]" title="Has comments" />
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={() => onClick(customer)}
+            className={`cursor-pointer inline-flex items-center gap-1.5 text-[13px] font-medium hover:underline text-left ${
+              deactivationStatus === 'active' ? 'text-[#9CA3AF]' : 'text-[#111827] hover:text-[#374151]'
+            }`}
+          >
+            {customer.name}
+            {hasComments && (
+              <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#FBB03F]" title="Has comments" />
+            )}
+          </button>
+          {deactivationStatus === 'pending' && (
+            <span
+              title="Pending admin approval"
+              className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-amber-200"
+            >
+              <span className="h-1 w-1 rounded-full bg-amber-500" />
+              Pending
+            </span>
           )}
-        </button>
+          {deactivationStatus === 'active' && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#F3F4F6] px-1.5 py-0.5 text-[10px] font-medium text-[#6B7280] ring-1 ring-[#E5E7EB]">
+              Deactivated
+            </span>
+          )}
+        </div>
       </td>
       <td className="py-3 px-3">
         <div className="flex items-center gap-1.5">

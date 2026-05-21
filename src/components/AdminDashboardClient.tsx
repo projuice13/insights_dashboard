@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Customer, Assignments, AdminUser, RawOrder } from '@/lib/types';
+import { Customer, Assignments, AdminUser, Deactivations, AppNotification } from '@/lib/types';
 import { parseCSV } from '@/lib/parseCSV';
 import CsvUploader from './CsvUploader';
 import Dashboard from './Dashboard';
@@ -29,6 +29,8 @@ interface Props {
   initialCustomersWithComments: string[];
   users: AdminUser[];
   currentUser: { id: string; name: string };
+  deactivations: Deactivations;
+  notifications: AppNotification[];
 }
 
 export default function AdminDashboardClient({
@@ -37,6 +39,8 @@ export default function AdminDashboardClient({
   initialCustomersWithComments,
   users,
   currentUser,
+  deactivations,
+  notifications,
 }: Props) {
   const router = useRouter();
 
@@ -125,13 +129,21 @@ export default function AdminDashboardClient({
         return next;
       });
 
+      // Build a {customerId: name} map for notification messages
+      const customerNames: Record<string, string> = {};
+      if (customers) {
+        for (const c of customers) {
+          if (ids.includes(c.id)) customerNames[c.id] = c.name;
+        }
+      }
+
       await fetch('/api/admin/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerIds: ids, userId: user?.id ?? null }),
+        body: JSON.stringify({ customerIds: ids, userId: user?.id ?? null, customerNames }),
       });
     },
-    [],
+    [customers],
   );
 
   const handleReset = useCallback(async () => {
@@ -175,6 +187,8 @@ export default function AdminDashboardClient({
         users={users}
         currentUser={currentUser}
         initialCustomersWithComments={initialCustomersWithComments}
+        deactivations={deactivations}
+        notifications={notifications}
         importStats={importStats}
         onAssign={handleAssign}
         onImport={handleUpload}

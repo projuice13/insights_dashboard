@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { verifySession } from '@/lib/dal';
 import { prisma } from '@/lib/db';
 import { buildCustomers } from '@/lib/dataTransforms';
-import { RawOrder, Assignments } from '@/lib/types';
+import { RawOrder, Assignments, Deactivations, AppNotification } from '@/lib/types';
 import TeamDashboardClient from '@/components/TeamDashboardClient';
 
 export default async function MyContactsPage() {
@@ -45,12 +45,51 @@ export default async function MyContactsPage() {
     select: { id: true, name: true, email: true, role: true },
   });
 
-  // Customers that have at least one comment (for the dot indicator)
+  // Customers that have at least one comment
   const commentedCustomerIds = await prisma.comment.findMany({
     select: { customerId: true },
     distinct: ['customerId'],
   });
   const customersWithComments = commentedCustomerIds.map((c) => c.customerId);
+
+  // Deactivations
+  const deactivationRows = await prisma.deactivation.findMany({
+    include: {
+      requestedBy: { select: { name: true } },
+      approvedBy: { select: { name: true } },
+    },
+  });
+  const deactivations: Deactivations = {};
+  for (const d of deactivationRows) {
+    deactivations[d.customerId] = {
+      customerId: d.customerId,
+      customerName: d.customerName,
+      status: d.status as 'pending' | 'active',
+      reason: d.reason,
+      requestedById: d.requestedById,
+      requestedByName: d.requestedBy.name,
+      requestedAt: d.requestedAt.toISOString(),
+      approvedById: d.approvedById,
+      approvedByName: d.approvedBy?.name ?? null,
+      approvedAt: d.approvedAt?.toISOString() ?? null,
+    };
+  }
+
+  // Notifications for this user
+  const notificationRows = await prisma.notification.findMany({
+    where: { userId: session.userId },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  });
+  const notifications: AppNotification[] = notificationRows.map((n) => ({
+    id: n.id,
+    type: n.type as AppNotification['type'],
+    customerId: n.customerId,
+    customerName: n.customerName,
+    message: n.message,
+    read: n.read,
+    createdAt: n.createdAt.toISOString(),
+  }));
 
   return (
     <TeamDashboardClient
@@ -60,6 +99,8 @@ export default async function MyContactsPage() {
       users={users}
       currentUser={{ id: session.userId, name: session.name }}
       myAssignedIds={myAssignedIds}
+      deactivations={deactivations}
+      notifications={notifications}
     />
   );
 }

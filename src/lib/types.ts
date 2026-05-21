@@ -65,6 +65,39 @@ export interface Customer {
 // assignments: Record<customerId, teamMemberName>
 export type Assignments = Record<string, string>;
 
+// One entry per customer that has been deactivated or has a pending deactivation request
+export interface Deactivation {
+  customerId: string;
+  customerName: string;
+  status: 'pending' | 'active';
+  reason: string;
+  requestedById: string;
+  requestedByName: string;
+  requestedAt: string; // ISO
+  approvedById: string | null;
+  approvedByName: string | null;
+  approvedAt: string | null;
+}
+
+// Map of customerId → Deactivation (so a lookup is O(1))
+export type Deactivations = Record<string, Deactivation>;
+
+export type NotificationType =
+  | 'assignment'
+  | 'deactivation_request'
+  | 'deactivation_approved'
+  | 'deactivation_rejected';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  customerId: string;
+  customerName: string;
+  message: string;
+  read: boolean;
+  createdAt: string; // ISO
+}
+
 export interface AdminUser {
   id: string;
   name: string;

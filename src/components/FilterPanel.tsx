@@ -34,6 +34,7 @@ interface FilterPanelProps {
   isTeam?: boolean;
   hideAssigned: boolean;
   assignedToMe?: boolean;
+  showDeactivated?: boolean;
 
   onCustomerType: (v: CustomerTypeFilter) => void;
   onRegion: (v: RegionFilter) => void;
@@ -42,6 +43,7 @@ interface FilterPanelProps {
   onRiskToggle: (v: RiskLevel) => void;
   onHideAssigned: (v: boolean) => void;
   onAssignedToMe?: (v: boolean) => void;
+  onShowDeactivated?: (v: boolean) => void;
 }
 
 const selectClass =
@@ -61,6 +63,7 @@ export default function FilterPanel({
   isTeam = false,
   hideAssigned,
   assignedToMe = true,
+  showDeactivated = false,
   onCustomerType,
   onRegion,
   onLastOrdered,
@@ -68,6 +71,7 @@ export default function FilterPanel({
   onRiskToggle,
   onHideAssigned,
   onAssignedToMe,
+  onShowDeactivated,
 }: FilterPanelProps) {
   // Prevent body scroll while panel is open
   useEffect(() => {
@@ -194,8 +198,8 @@ export default function FilterPanel({
             </div>
           </div>
 
-          {/* Assignment filter */}
-          <div className="border-t border-[#F3F4F6] pt-1">
+          {/* Assignment + deactivation toggles */}
+          <div className="space-y-3 border-t border-[#F3F4F6] pt-1">
             {isTeam ? (
               <label className="flex cursor-pointer items-center gap-2.5">
                 <input
@@ -215,6 +219,19 @@ export default function FilterPanel({
                   className="h-3.5 w-3.5 cursor-pointer rounded border-[#D1D5DB] text-[#374151] focus:ring-0"
                 />
                 <span className="text-sm text-[#374151]">Hide assigned</span>
+              </label>
+            )}
+
+            {/* Show deactivated — admin only */}
+            {!isTeam && onShowDeactivated && (
+              <label className="flex cursor-pointer items-center gap-2.5">
+                <input
+                  type="checkbox"
+                  checked={showDeactivated}
+                  onChange={(e) => onShowDeactivated(e.target.checked)}
+                  className="h-3.5 w-3.5 cursor-pointer rounded border-[#D1D5DB] text-[#374151] focus:ring-0"
+                />
+                <span className="text-sm text-[#374151]">Show deactivated</span>
               </label>
             )}
           </div>

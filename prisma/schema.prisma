@@ -8,15 +8,47 @@ datasource db {
 }
 
 model User {
-  id             String       @id @default(cuid())
-  name           String
-  email          String       @unique
-  passwordHash   String
-  role           String       @default("team")
-  mustChangePass Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  assignments    Assignment[]
-  comments       Comment[]
+  id                     String         @id @default(cuid())
+  name                   String
+  email                  String         @unique
+  passwordHash           String
+  role                   String         @default("team")
+  mustChangePass         Boolean        @default(true)
+  createdAt              DateTime       @default(now())
+  assignments            Assignment[]
+  comments               Comment[]
+  deactivationsRequested Deactivation[] @relation("DeactivationRequester")
+  deactivationsApproved  Deactivation[] @relation("DeactivationApprover")
+  notifications          Notification[]
+}
+
+model Deactivation {
+  customerId    String    @id
+  customerName  String
+  status        String    // "pending" | "active"
+  reason        String
+  requestedById String
+  requestedAt   DateTime  @default(now())
+  approvedById  String?
+  approvedAt    DateTime?
+  requestedBy   User      @relation("DeactivationRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  approvedBy    User?     @relation("DeactivationApprover", fields: [approvedById], references: [id])
+
+  @@index([status])
+}
+
+model Notification {
+  id           String   @id @default(cuid())
+  userId       String
+  type         String   // assignment | deactivation_request | deactivation_approved | deactivation_rejected
+  customerId   String
+  customerName String
+  message      String
+  read         Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read, createdAt])
 }
 
 model RawOrderRow {
