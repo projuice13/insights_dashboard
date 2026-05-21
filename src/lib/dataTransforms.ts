@@ -67,7 +67,7 @@ function mostCommon(values: string[]): string {
 }
 
 /** Stable ID for a customer: normalised name + postcode, so branches stay distinct. */
-function makeId(name: string, postcode: string): string {
+export function makeId(name: string, postcode: string): string {
   return `${name.trim().toLowerCase()}|${postcode.replace(/\s+/g, '').toUpperCase()}`;
 }
 

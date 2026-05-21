@@ -86,7 +86,8 @@ export type NotificationType =
   | 'assignment'
   | 'deactivation_request'
   | 'deactivation_approved'
-  | 'deactivation_rejected';
+  | 'deactivation_rejected'
+  | 'auto_reactivated';
 
 export interface AppNotification {
   id: string;
