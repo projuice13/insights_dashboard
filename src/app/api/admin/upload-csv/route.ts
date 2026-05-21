@@ -1,38 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/db';
-import { buildCustomers } from '@/lib/dataTransforms';
 import { RawOrder } from '@/lib/types';
 
-// Allow up to 60 s on Vercel (Pro) / 10 s on Hobby — prevents timeout blank screens
+// Allow up to 60 s on Vercel
 export const maxDuration = 60;
 
 async function requireAdmin() {
   const session = await getSession();
   if (!session || session.role !== 'admin') return null;
   return session;
-}
-
-function rowToRawOrder(r: {
-  salesOrderNumber: string;
-  customerName: string;
-  postcode: string;
-  contactName: string;
-  primaryEmail: string | null;
-  secondaryEmail: string | null;
-  orderValue: number;
-  orderDate: string;
-}): RawOrder {
-  return {
-    sales_order_number: r.salesOrderNumber,
-    customer_name: r.customerName,
-    postcode: r.postcode,
-    contact_name: r.contactName,
-    primary_email: r.primaryEmail,
-    secondary_email: r.secondaryEmail,
-    order_value: r.orderValue,
-    order_date: r.orderDate,
-  };
 }
 
 export async function POST(req: NextRequest) {
@@ -46,7 +23,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No orders provided.' }, { status: 400 });
   }
 
-  // Find which order numbers already exist so we can skip them
+  // Skip any orders whose SalesOrder.Number already exists
   const incomingNumbers = orders.map((o) => o.sales_order_number);
   const existing = await prisma.rawOrderRow.findMany({
     where: { salesOrderNumber: { in: incomingNumbers } },
@@ -72,13 +49,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const imported = newOrders.length;
-
-  // Rebuild customers from the full historical dataset
-  const allRows = await prisma.rawOrderRow.findMany();
-  const customers = buildCustomers(allRows.map(rowToRawOrder));
-
-  return NextResponse.json({ customers, imported, skipped });
+  return NextResponse.json({ imported: newOrders.length, skipped });
 }
 
 export async function DELETE() {

@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Customer, Assignments, AdminUser } from '@/lib/types';
+import { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Customer, Assignments, AdminUser, RawOrder } from '@/lib/types';
 import { parseCSV } from '@/lib/parseCSV';
+import CsvUploader from './CsvUploader';
+import Dashboard from './Dashboard';
 
-// JSON serialises Date → string; convert them back after any API response
+// JSON serialises Date → string; convert them back after any server response
 function rehydrateDates(customers: Customer[]): Customer[] {
   return customers.map((c) => ({
     ...c,
@@ -15,8 +18,10 @@ function rehydrateDates(customers: Customer[]): Customer[] {
     })),
   }));
 }
-import CsvUploader from './CsvUploader';
-import Dashboard from './Dashboard';
+
+// Vercel caps request bodies at 4.5 MB. Each order is ~200 B of JSON, so
+// 500 orders per chunk = ~100 KB — well under the limit and fast to process.
+const CHUNK_SIZE = 500;
 
 interface Props {
   initialCustomers: Customer[] | null;
@@ -33,57 +38,80 @@ export default function AdminDashboardClient({
   users,
   currentUser,
 }: Props) {
+  const router = useRouter();
+
   const [customers, setCustomers] = useState<Customer[] | null>(
     initialCustomers ? rehydrateDates(initialCustomers) : null,
   );
   const [assignments, setAssignments] = useState<Assignments>(initialAssignments);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [importStats, setImportStats] = useState<{ imported: number; skipped: number } | null>(null);
 
+  // Re-sync local state when the server sends fresh data (after router.refresh)
+  useEffect(() => {
+    setCustomers(initialCustomers ? rehydrateDates(initialCustomers) : null);
+  }, [initialCustomers]);
+
+  useEffect(() => {
+    setAssignments(initialAssignments);
+  }, [initialAssignments]);
+
   const handleUpload = useCallback(async (file: File) => {
-    setLoading(true);
     setError(null);
     setImportStats(null);
+    setUploadProgress({ done: 0, total: 0 });
 
     try {
       const { orders, error: parseError } = await parseCSV(file);
 
       if (parseError || orders.length === 0) {
         setError(parseError ?? 'No order data found in the CSV file.');
-        setLoading(false);
+        setUploadProgress(null);
         return;
       }
 
-      const res = await fetch('/api/admin/upload-csv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orders }),
-      });
+      setUploadProgress({ done: 0, total: orders.length });
 
-      let data: { customers?: unknown[]; imported?: number; skipped?: number; error?: string };
-      try {
-        data = await res.json();
-      } catch {
-        throw new Error(`Server error (${res.status} ${res.statusText})`);
+      let totalImported = 0;
+      let totalSkipped = 0;
+
+      // Send orders in chunks to stay under Vercel's 4.5 MB body limit
+      for (let i = 0; i < orders.length; i += CHUNK_SIZE) {
+        const chunk = orders.slice(i, i + CHUNK_SIZE);
+
+        const res = await fetch('/api/admin/upload-csv', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orders: chunk }),
+        });
+
+        let data: { imported?: number; skipped?: number; error?: string };
+        try {
+          data = await res.json();
+        } catch {
+          throw new Error(`Server error (${res.status} ${res.statusText})`);
+        }
+
+        if (!res.ok) {
+          throw new Error(data.error ?? `Upload failed (${res.status})`);
+        }
+
+        totalImported += data.imported ?? 0;
+        totalSkipped += data.skipped ?? 0;
+        setUploadProgress({ done: Math.min(i + CHUNK_SIZE, orders.length), total: orders.length });
       }
 
-      if (!res.ok) {
-        throw new Error(data.error ?? `Upload failed (${res.status})`);
-      }
+      setImportStats({ imported: totalImported, skipped: totalSkipped });
 
-      if (!data.customers) {
-        throw new Error('No customer data returned from server.');
-      }
-
-      setCustomers(rehydrateDates(data.customers as never));
-      setImportStats({ imported: data.imported ?? 0, skipped: data.skipped ?? 0 });
+      // Reload server data — the page re-runs buildCustomers() from the full DB
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred during upload.');
     } finally {
-      setLoading(false);
+      setUploadProgress(null);
     }
-  }, []);
+  }, [router]);
 
   const handleAssign = useCallback(
     async (ids: string[], user: AdminUser | null) => {
@@ -110,17 +138,30 @@ export default function AdminDashboardClient({
     await fetch('/api/admin/upload-csv', { method: 'DELETE' });
     setCustomers(null);
     setError(null);
-  }, []);
+    router.refresh();
+  }, [router]);
 
-  if (loading) {
+  if (uploadProgress) {
+    const pct = uploadProgress.total > 0
+      ? Math.round((uploadProgress.done / uploadProgress.total) * 100)
+      : 0;
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F9FAFB]">
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-4 w-72">
           <svg className="h-6 w-6 animate-spin text-[#6B7280]" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
           </svg>
-          <p className="text-sm text-[#6B7280]">Importing, please wait…</p>
+          <p className="text-sm text-[#374151]">Importing orders…</p>
+          <div className="w-full h-1.5 rounded-full bg-[#E5E7EB] overflow-hidden">
+            <div
+              className="h-full bg-[#111827] transition-all"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <p className="text-xs text-[#9CA3AF]">
+            {uploadProgress.done.toLocaleString()} / {uploadProgress.total.toLocaleString()} ({pct}%)
+          </p>
         </div>
       </div>
     );
@@ -142,5 +183,5 @@ export default function AdminDashboardClient({
     );
   }
 
-  return <CsvUploader onUpload={handleUpload} error={error} loading={loading} />;
+  return <CsvUploader onUpload={handleUpload} error={error} loading={false} />;
 }
