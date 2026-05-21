@@ -25,6 +25,7 @@ export default function UsersClient({ initialUsers }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState<{ name: string; password: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [resettingId, setResettingId] = useState<string | null>(null);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +76,25 @@ export default function UsersClient({ initialUsers }: Props) {
     if (res.ok) {
       setUsers((prev) => prev.filter((u) => u.id !== userId));
     }
+  };
+
+  const handleResetPassword = async (userId: string, userName: string) => {
+    if (!confirm(`Reset password for ${userName}? They'll be forced to set a new one on next login.`)) return;
+    setResettingId(userId);
+
+    const res = await fetch(`/api/admin/users/${userId}/reset-password`, { method: 'POST' });
+    const data = await res.json();
+
+    setResettingId(null);
+
+    if (!res.ok) {
+      alert(data.error ?? 'Failed to reset password.');
+      return;
+    }
+
+    // Flag the user as needing to change password and show the temp password modal
+    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, mustChangePass: true } : u)));
+    setNewPassword({ name: data.name, password: data.temporaryPassword });
   };
 
   return (
@@ -147,7 +167,15 @@ export default function UsersClient({ initialUsers }: Props) {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => handleResetPassword(u.id, u.name)}
+                          disabled={resettingId === u.id}
+                          className="cursor-pointer text-[13px] text-[#6B7280] hover:text-[#374151] disabled:opacity-40"
+                        >
+                          {resettingId === u.id ? 'Resetting…' : 'Reset password'}
+                        </button>
+                        <span className="mx-2 text-[#D1D5DB]">·</span>
                         <button
                           onClick={() => handleDelete(u.id)}
                           disabled={deletingId === u.id}
@@ -225,7 +253,7 @@ export default function UsersClient({ initialUsers }: Props) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
           <div className="w-full max-w-sm rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-xl mx-4">
             <h3 className="text-base font-semibold text-[#111827]">
-              User created — temporary password
+              Temporary password
             </h3>
             <p className="mt-2 text-sm text-[#6B7280]">
               Share this password with <strong>{newPassword.name}</strong>. It will only be shown once.
