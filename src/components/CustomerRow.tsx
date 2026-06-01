@@ -12,9 +12,11 @@ interface CustomerRowProps {
   users: AdminUser[];
   isTeam?: boolean;
   customerStatus?: CustomerStatus | null;
+  canEditStatus?: boolean;
   onSelect: (id: string, shiftKey: boolean) => void;
   onClick: (customer: Customer) => void;
   onReassign: (id: string, userId: string | null) => void;
+  onSetStatus?: (customer: Customer) => void;
 }
 
 function formatCurrency(n: number): string {
@@ -33,9 +35,11 @@ export default function CustomerRow({
   users,
   isTeam = false,
   customerStatus = null,
+  canEditStatus = false,
   onSelect,
   onClick,
   onReassign,
+  onSetStatus,
 }: CustomerRowProps) {
   const cfg = customerStatus ? STATUS_CONFIG[customerStatus.status] : null;
   const isPendingDeactivation =
@@ -91,24 +95,6 @@ export default function CustomerRow({
               <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#FBB03F]" title="Has comments" />
             )}
           </button>
-          {customerStatus && cfg && (
-            isPendingDeactivation ? (
-              <span
-                title="Pending admin approval"
-                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-amber-200"
-              >
-                <span className="h-1 w-1 rounded-full bg-amber-500" />
-                Pending
-              </span>
-            ) : (
-              <span
-                title={customerStatus.reason ?? undefined}
-                className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ring-1 ${cfg.bg} ${cfg.text} ${cfg.ring}`}
-              >
-                {cfg.label}
-              </span>
-            )
-          )}
         </div>
       </td>
       <td className="py-3 px-3">
@@ -122,10 +108,70 @@ export default function CustomerRow({
         </div>
       </td>
       <td className="py-3 px-3 text-[13px] text-[#374151]">{customer.postcode}</td>
-      <td className="py-3 px-3 text-[13px] text-[#6B7280]">{customer.email || '—'}</td>
       <td className="py-3 px-3 text-right text-[13px] text-[#374151]">{customer.totalOrders}</td>
       <td className="py-3 px-3 text-right text-[13px] text-[#374151]">{formatCurrency(customer.totalSpend)}</td>
       <td className="py-3 px-3 pr-4 text-right text-[13px] text-[#6B7280]">{formatDate(customer.lastOrderDate)}</td>
+      {/* Status cell */}
+      <td className="py-3 px-3">
+        {canEditStatus && onSetStatus ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onSetStatus(customer); }}
+            title={canEditStatus ? 'Click to change status' : undefined}
+            className={`cursor-pointer inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 transition-opacity hover:opacity-80 ${
+              isPendingDeactivation
+                ? 'bg-amber-50 text-amber-700 ring-amber-200'
+                : cfg
+                ? `${cfg.bg} ${cfg.text} ${cfg.ring}`
+                : 'bg-[#F3F4F6] text-[#9CA3AF] ring-[#E5E7EB]'
+            }`}
+          >
+            {isPendingDeactivation ? (
+              <>
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                Pending
+              </>
+            ) : cfg ? (
+              <>
+                <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                {cfg.label}
+              </>
+            ) : (
+              <>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#D1D5DB]" />
+                Active
+              </>
+            )}
+          </button>
+        ) : (
+          // Read-only badge (no permission to edit)
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${
+              isPendingDeactivation
+                ? 'bg-amber-50 text-amber-700 ring-amber-200'
+                : cfg
+                ? `${cfg.bg} ${cfg.text} ${cfg.ring}`
+                : 'bg-[#F3F4F6] text-[#9CA3AF] ring-[#E5E7EB]'
+            }`}
+          >
+            {isPendingDeactivation ? (
+              <>
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                Pending
+              </>
+            ) : cfg ? (
+              <>
+                <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                {cfg.label}
+              </>
+            ) : (
+              <>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#D1D5DB]" />
+                Active
+              </>
+            )}
+          </span>
+        )}
+      </td>
       <td className="py-3 px-3">
         {isTeam ? (
           assignedTo ? (

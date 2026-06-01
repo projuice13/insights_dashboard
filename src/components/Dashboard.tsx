@@ -387,11 +387,13 @@ export default function Dashboard({
           customersWithComments={customersWithComments}
           isTeam={isTeam}
           customerStatuses={customerStatuses}
+          assignedCustomerIds={isAdmin ? undefined : myAssignedSet}
           onSelect={handleSelect}
           onSelectAll={handleSelectAll}
           onClearAll={resetSelection}
           onClickCustomer={setActiveCustomer}
           onReassign={handleReassign}
+          onSetStatus={setStatusModalCustomer}
         />
       </main>
 
@@ -404,6 +406,7 @@ export default function Dashboard({
         onAllCommentsDeleted={handleAllCommentsDeleted}
         customerStatus={activeCustomer ? customerStatuses[activeCustomer.id] ?? null : null}
         isAdmin={isAdmin}
+        canEditStatus={isAdmin || myAssignedSet.has(activeCustomer?.id ?? '')}
         onSetStatus={setStatusModalCustomer}
       />
 

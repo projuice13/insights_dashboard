@@ -20,6 +20,7 @@ interface SidePanelProps {
   // Status tag
   customerStatus?: CustomerStatus | null;
   isAdmin?: boolean;
+  canEditStatus?: boolean;
   onSetStatus?: (customer: Customer) => void;
 }
 
@@ -35,6 +36,7 @@ export default function SidePanel({
   onAllCommentsDeleted,
   customerStatus = null,
   isAdmin = false,
+  canEditStatus = false,
   onSetStatus,
 }: SidePanelProps) {
   const [tab, setTab] = useState<Tab>('data');
@@ -173,8 +175,8 @@ export default function SidePanel({
                     </div>
                   )}
 
-                  {/* Show set-status button to anyone — unless team trying to touch a deactivated customer */}
-                  {(isAdmin || customerStatus?.status !== 'deactivated') && (
+                  {/* Only show button if this user has permission to edit this customer's status */}
+                  {canEditStatus && (
                     <button
                       onClick={() => onSetStatus(customer)}
                       className="cursor-pointer w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium text-[#374151] transition-colors hover:border-[#9CA3AF]"

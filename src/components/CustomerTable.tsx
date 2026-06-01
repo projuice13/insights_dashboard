@@ -14,15 +14,17 @@ interface CustomerTableProps {
   customersWithComments: Set<string>;
   isTeam?: boolean;
   customerStatuses?: CustomerStatuses;
+  assignedCustomerIds?: Set<string>;
   onSelect: (id: string, shiftKey: boolean) => void;
   onSelectAll: (ids: string[]) => void;
   onClearAll: () => void;
   onClickCustomer: (customer: Customer) => void;
   onReassign: (id: string, userId: string | null) => void;
+  onSetStatus?: (customer: Customer) => void;
 }
 
 interface Column {
-  key: SortField | 'assigned';
+  key: SortField | 'assigned' | 'status';
   label: string;
   align?: 'right';
   sortable: boolean;
@@ -33,10 +35,10 @@ const COLUMNS: Column[] = [
   { key: 'name',           label: 'Customer Name', sortable: true },
   { key: 'contactName',    label: 'Region',        sortable: true },
   { key: 'postcode',       label: 'Postcode',      sortable: true },
-  { key: 'email',          label: 'Email',         sortable: true },
   { key: 'totalOrders',    label: 'Orders',        sortable: true, align: 'right' },
   { key: 'totalSpend',     label: 'Total Spend',   sortable: true, align: 'right' },
   { key: 'lastOrderDate',  label: 'Last Order',    sortable: true, align: 'right' },
+  { key: 'status',         label: 'Status',        sortable: false },
   { key: 'assigned',       label: 'Assigned',      sortable: false },
 ];
 
@@ -48,11 +50,13 @@ export default function CustomerTable({
   customersWithComments,
   isTeam = false,
   customerStatuses = {},
+  assignedCustomerIds,
   onSelect,
   onSelectAll,
   onClearAll,
   onClickCustomer,
   onReassign,
+  onSetStatus,
 }: CustomerTableProps) {
   const [sortField, setSortField] = useState<SortField>('gapRatio');
   const [sortDir, setSortDir] = useState<SortDirection>('desc');
@@ -213,21 +217,29 @@ export default function CustomerTable({
                   </td>
                 </tr>
               )}
-              {paginated.map((customer, index) => (
-                <CustomerRow
-                  key={customer.id}
-                  customer={customer}
-                  selected={selected.has(customer.id)}
-                  assignedTo={assignments[customer.id] ?? null}
-                  hasComments={customersWithComments.has(customer.id)}
-                  users={users}
-                  isTeam={isTeam}
-                  customerStatus={customerStatuses[customer.id] ?? null}
-                  onSelect={(id, shiftKey) => handleRowSelect(id, index, shiftKey)}
-                  onClick={onClickCustomer}
-                  onReassign={onReassign}
-                />
-              ))}
+              {paginated.map((customer, index) => {
+                // Admin: can always edit. Team: only if this customer is assigned to them.
+                const canEditStatus = assignedCustomerIds
+                  ? assignedCustomerIds.has(customer.id)  // team user
+                  : true;                                  // admin
+                return (
+                  <CustomerRow
+                    key={customer.id}
+                    customer={customer}
+                    selected={selected.has(customer.id)}
+                    assignedTo={assignments[customer.id] ?? null}
+                    hasComments={customersWithComments.has(customer.id)}
+                    users={users}
+                    isTeam={isTeam}
+                    customerStatus={customerStatuses[customer.id] ?? null}
+                    canEditStatus={canEditStatus}
+                    onSelect={(id, shiftKey) => handleRowSelect(id, index, shiftKey)}
+                    onClick={onClickCustomer}
+                    onReassign={onReassign}
+                    onSetStatus={onSetStatus}
+                  />
+                );
+              })}
             </tbody>
           </table>
         )}
