@@ -150,7 +150,30 @@ export default function StatusModal({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-[#F3F4F6] px-5 py-3">
+        <div className="flex items-center justify-between border-t border-[#F3F4F6] px-5 py-3">
+          {/* Only show "Remove status" when the customer already has one */}
+          {currentStatus !== null ? (
+            <button
+              onClick={async () => {
+                setSelected(null);
+                setError(null);
+                setSubmitting(true);
+                try {
+                  await onConfirm(null, '');
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'Something went wrong.');
+                  setSubmitting(false);
+                }
+              }}
+              disabled={submitting}
+              className="cursor-pointer text-sm text-[#9CA3AF] transition-colors hover:text-red-500 disabled:cursor-default disabled:opacity-50"
+            >
+              Remove status
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="flex items-center gap-2">
           <button
             onClick={onClose}
             disabled={submitting}
@@ -192,6 +215,7 @@ export default function StatusModal({
                   ? 'Set to Active'
                   : 'Save status'}
           </button>
+          </div>
         </div>
       </div>
     </>
