@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Customer,
@@ -74,6 +74,10 @@ export default function Dashboard({
   const [activeCustomer, setActiveCustomer] = useState<Customer | null>(null);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [statusModalCustomer, setStatusModalCustomer] = useState<Customer | null>(null);
+  // Local copy of statuses so we can update the badge instantly (optimistic),
+  // then let router.refresh() sync the server data in the background.
+  const [localStatuses, setLocalStatuses] = useState<CustomerStatuses>(customerStatuses);
+  useEffect(() => { setLocalStatuses(customerStatuses); }, [customerStatuses]);
 
   // Helper: default state of the status filter (used to detect "deviation from default")
   const DEFAULT_STATUS_FILTER: ReadonlySet<StatusFilterValue> = new Set<StatusFilterValue>([
@@ -140,7 +144,7 @@ export default function Dashboard({
       if (region !== 'all' && c.contactName.toLowerCase() !== region.toLowerCase()) return false;
 
       // Status filtering
-      const cs = customerStatuses[c.id];
+      const cs = localStatuses[c.id];
       const effectiveStatus: StatusFilterValue =
         cs && cs.approvalStatus === 'approved' ? cs.status : 'active';
       // Approved 'deactivated' customers are hidden from team users full-stop.
@@ -179,7 +183,7 @@ export default function Dashboard({
     });
   }, [customers, customerType, region, lastOrdered, spend, riskLevels,
       hideAssigned, assignedToMe, isTeam, myAssignedSet, assignments,
-      customerStatuses, statusFilter]);
+      localStatuses, statusFilter]);
 
   const searched = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -246,7 +250,6 @@ export default function Dashboard({
 
       let res: Response;
       if (status === null) {
-        // Clear back to Active
         res = await fetch(`/api/customers/${statusModalCustomer.id}/status`, { method: 'DELETE' });
       } else {
         res = await fetch(`/api/customers/${statusModalCustomer.id}/status`, {
@@ -259,11 +262,38 @@ export default function Dashboard({
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? 'Failed to update status.');
       }
+
+      // Optimistically update the badge so it changes the moment the modal closes,
+      // instead of waiting several seconds for router.refresh() to complete.
+      setLocalStatuses((prev) => {
+        const next = { ...prev };
+        if (status === null) {
+          delete next[statusModalCustomer.id];
+        } else {
+          const isPendingDeactivation = isTeam && status === 'deactivated';
+          next[statusModalCustomer.id] = {
+            customerId: statusModalCustomer.id,
+            customerName: statusModalCustomer.name,
+            status,
+            approvalStatus: isPendingDeactivation ? 'pending' : 'approved',
+            reason: reason || null,
+            setById: currentUser.id,
+            setByName: currentUser.name,
+            setAt: new Date().toISOString(),
+            approvedById: isAdmin ? currentUser.id : null,
+            approvedByName: isAdmin ? currentUser.name : null,
+            approvedAt: isAdmin ? new Date().toISOString() : null,
+          };
+        }
+        return next;
+      });
+
       setStatusModalCustomer(null);
-      // Keep the side panel open so the user sees the new status reflected
+      // Sync server data in the background; when it arrives the useEffect above
+      // will overwrite localStatuses with the authoritative values.
       router.refresh();
     },
-    [statusModalCustomer, router],
+    [statusModalCustomer, router, isTeam, isAdmin, currentUser],
   );
 
   return (
@@ -386,7 +416,7 @@ export default function Dashboard({
           users={users}
           customersWithComments={customersWithComments}
           isTeam={isTeam}
-          customerStatuses={customerStatuses}
+          customerStatuses={localStatuses}
           assignedCustomerIds={isAdmin ? undefined : myAssignedSet}
           onSelect={handleSelect}
           onSelectAll={handleSelectAll}
@@ -404,7 +434,7 @@ export default function Dashboard({
         hasComments={activeCustomer ? customersWithComments.has(activeCustomer.id) : false}
         onCommentAdded={handleCommentAdded}
         onAllCommentsDeleted={handleAllCommentsDeleted}
-        customerStatus={activeCustomer ? customerStatuses[activeCustomer.id] ?? null : null}
+        customerStatus={activeCustomer ? localStatuses[activeCustomer.id] ?? null : null}
         isAdmin={isAdmin}
         canEditStatus={isAdmin || myAssignedSet.has(activeCustomer?.id ?? '')}
         onSetStatus={setStatusModalCustomer}
@@ -413,7 +443,7 @@ export default function Dashboard({
       {statusModalCustomer && (
         <StatusModal
           customerName={statusModalCustomer.name}
-          currentStatus={customerStatuses[statusModalCustomer.id]?.status ?? null}
+          currentStatus={localStatuses[statusModalCustomer.id]?.status ?? null}
           isTeam={isTeam}
           onClose={() => setStatusModalCustomer(null)}
           onConfirm={handleConfirmStatus}
