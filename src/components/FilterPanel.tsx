@@ -76,7 +76,7 @@ export default function FilterPanel({
   hideAssigned,
   assignedToMe = true,
   statusFilter,
-  assignedToFilter = 'unassigned',
+  assignedToFilter = 'all',
   assignableUsers = [],
   onCustomerType,
   onRegion,

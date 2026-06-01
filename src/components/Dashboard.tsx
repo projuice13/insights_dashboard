@@ -63,8 +63,8 @@ export default function Dashboard({
   const [lastOrdered, setLastOrdered] = useState<DateRange>({ from: null, to: null });
   const [spend, setSpend] = useState<SpendFilter>('all');
   const [riskLevels, setRiskLevels] = useState<Set<'high' | 'medium' | 'low'>>(new Set());
-  // 'unassigned' = default; 'all' = no filter; user name = that person's contacts
-  const [assignedToFilter, setAssignedToFilter] = useState<string>('unassigned');
+  // 'all' = default (no filter); 'unassigned' = no assignee; user name = that person's contacts
+  const [assignedToFilter, setAssignedToFilter] = useState<string>('all');
   const [assignedToMe, setAssignedToMe] = useState(true); // team default: on
   // Default: all statuses selected EXCEPT 'deactivated' (matches old behaviour)
   const [statusFilter, setStatusFilter] = useState<Set<StatusFilterValue>>(
@@ -111,7 +111,7 @@ export default function Dashboard({
     if (lastOrdered.from || lastOrdered.to) count++;
     if (spend !== 'all') count++;
     if (riskLevels.size > 0) count++;
-    if (!isTeam && assignedToFilter !== 'unassigned') count++;
+    if (!isTeam && assignedToFilter !== 'all') count++;
     if (isTeam && !assignedToMe) count++;
     if (!isTeam && !statusFilterIsDefault) count++;
     return count;
@@ -123,7 +123,7 @@ export default function Dashboard({
     setLastOrdered({ from: null, to: null });
     setSpend('all');
     setRiskLevels(new Set());
-    setAssignedToFilter('unassigned');
+    setAssignedToFilter('all');
     setAssignedToMe(true);
     setStatusFilter(new Set(['active', 'hot', 'possible', 'seasonal', 'no_response', 'dormant']));
     resetSelection();
