@@ -8,6 +8,7 @@ import {
   StatusFilterValue,
   CustomerStatusType,
   STATUS_CONFIG,
+  AdminUser,
 } from '@/lib/types';
 import DateRangePicker, { DateRange } from './DateRangePicker';
 
@@ -42,6 +43,9 @@ interface FilterPanelProps {
   hideAssigned: boolean;
   assignedToMe?: boolean;
   statusFilter?: Set<StatusFilterValue>;
+  // Admin-only: filter by assignee
+  assignedToFilter?: string;   // 'unassigned' | 'all' | user.name
+  assignableUsers?: AdminUser[];
 
   onCustomerType: (v: CustomerTypeFilter) => void;
   onRegion: (v: RegionFilter) => void;
@@ -51,6 +55,7 @@ interface FilterPanelProps {
   onHideAssigned: (v: boolean) => void;
   onAssignedToMe?: (v: boolean) => void;
   onStatusToggle?: (v: StatusFilterValue) => void;
+  onAssignedTo?: (v: string) => void;
 }
 
 const selectClass =
@@ -71,6 +76,8 @@ export default function FilterPanel({
   hideAssigned,
   assignedToMe = true,
   statusFilter,
+  assignedToFilter = 'unassigned',
+  assignableUsers = [],
   onCustomerType,
   onRegion,
   onLastOrdered,
@@ -79,6 +86,7 @@ export default function FilterPanel({
   onHideAssigned,
   onAssignedToMe,
   onStatusToggle,
+  onAssignedTo,
 }: FilterPanelProps) {
   // Prevent body scroll while panel is open
   useEffect(() => {
@@ -205,7 +213,7 @@ export default function FilterPanel({
             </div>
           </div>
 
-          {/* Assignment + deactivation toggles */}
+          {/* Assignment filters */}
           <div className="space-y-3 border-t border-[#F3F4F6] pt-1">
             {isTeam ? (
               <label className="flex cursor-pointer items-center gap-2.5">
@@ -218,15 +226,20 @@ export default function FilterPanel({
                 <span className="text-sm text-[#374151]">Assigned to me</span>
               </label>
             ) : (
-              <label className="flex cursor-pointer items-center gap-2.5">
-                <input
-                  type="checkbox"
-                  checked={hideAssigned}
-                  onChange={(e) => onHideAssigned(e.target.checked)}
-                  className="h-3.5 w-3.5 cursor-pointer rounded border-[#D1D5DB] text-[#374151] focus:ring-0"
-                />
-                <span className="text-sm text-[#374151]">Hide assigned</span>
-              </label>
+              <div>
+                <label className="mb-2 block text-xs font-medium text-[#6B7280]">Assigned to</label>
+                <select
+                  value={assignedToFilter}
+                  onChange={(e) => onAssignedTo?.(e.target.value)}
+                  className={selectClass}
+                >
+                  <option value="unassigned">Unassigned</option>
+                  <option value="all">All customers</option>
+                  {assignableUsers.map((u) => (
+                    <option key={u.id} value={u.name}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
             )}
 
             {/* Customer status — admin only (team members always see active + their pending) */}

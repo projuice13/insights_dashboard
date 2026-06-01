@@ -63,7 +63,8 @@ export default function Dashboard({
   const [lastOrdered, setLastOrdered] = useState<DateRange>({ from: null, to: null });
   const [spend, setSpend] = useState<SpendFilter>('all');
   const [riskLevels, setRiskLevels] = useState<Set<'high' | 'medium' | 'low'>>(new Set());
-  const [hideAssigned, setHideAssigned] = useState(false);
+  // 'unassigned' = default; 'all' = no filter; user name = that person's contacts
+  const [assignedToFilter, setAssignedToFilter] = useState<string>('unassigned');
   const [assignedToMe, setAssignedToMe] = useState(true); // team default: on
   // Default: all statuses selected EXCEPT 'deactivated' (matches old behaviour)
   const [statusFilter, setStatusFilter] = useState<Set<StatusFilterValue>>(
@@ -110,11 +111,11 @@ export default function Dashboard({
     if (lastOrdered.from || lastOrdered.to) count++;
     if (spend !== 'all') count++;
     if (riskLevels.size > 0) count++;
-    if (!isTeam && hideAssigned) count++;
+    if (!isTeam && assignedToFilter !== 'unassigned') count++;
     if (isTeam && !assignedToMe) count++;
     if (!isTeam && !statusFilterIsDefault) count++;
     return count;
-  }, [customerType, region, lastOrdered, spend, riskLevels, hideAssigned, assignedToMe, isTeam, statusFilterIsDefault]);
+  }, [customerType, region, lastOrdered, spend, riskLevels, assignedToFilter, assignedToMe, isTeam, statusFilterIsDefault]);
 
   const handleClearAllFilters = useCallback(() => {
     setCustomerType('standard');
@@ -122,7 +123,7 @@ export default function Dashboard({
     setLastOrdered({ from: null, to: null });
     setSpend('all');
     setRiskLevels(new Set());
-    setHideAssigned(false);
+    setAssignedToFilter('unassigned');
     setAssignedToMe(true);
     setStatusFilter(new Set(['active', 'hot', 'possible', 'seasonal', 'no_response', 'dormant']));
     resetSelection();
@@ -157,8 +158,11 @@ export default function Dashboard({
 
       // Team: "Assigned to me" filter
       if (isTeam && assignedToMe && !myAssignedSet.has(c.id)) return false;
-      // Admin: "Hide assigned" filter
-      if (!isTeam && hideAssigned && assignments[c.id]) return false;
+      // Admin: "Assigned to" filter
+      if (!isTeam) {
+        if (assignedToFilter === 'unassigned' && assignments[c.id]) return false;
+        if (assignedToFilter !== 'unassigned' && assignedToFilter !== 'all' && assignments[c.id] !== assignedToFilter) return false;
+      }
 
       if (lastOrdered.from && c.lastOrderDate < lastOrdered.from) return false;
       if (lastOrdered.to) {
@@ -182,7 +186,7 @@ export default function Dashboard({
       return true;
     });
   }, [customers, customerType, region, lastOrdered, spend, riskLevels,
-      hideAssigned, assignedToMe, isTeam, myAssignedSet, assignments,
+      assignedToFilter, assignedToMe, isTeam, myAssignedSet, assignments,
       localStatuses, statusFilter]);
 
   const searched = useMemo(() => {
@@ -462,17 +466,20 @@ export default function Dashboard({
         riskLevels={riskLevels}
         regions={allRegions}
         isTeam={isTeam}
-        hideAssigned={hideAssigned}
+        hideAssigned={false}
         assignedToMe={assignedToMe}
         statusFilter={statusFilter}
+        assignedToFilter={assignedToFilter}
+        assignableUsers={isAdmin ? users : []}
         onCustomerType={(v) => { setCustomerType(v); resetSelection(); }}
         onRegion={(v) => { setRegion(v); resetSelection(); }}
         onLastOrdered={(v) => { setLastOrdered(v); resetSelection(); }}
         onSpend={(v) => { setSpend(v); resetSelection(); }}
         onRiskToggle={handleRiskToggle}
-        onHideAssigned={(v) => { setHideAssigned(v); resetSelection(); }}
+        onHideAssigned={() => {}}
         onAssignedToMe={(v) => { setAssignedToMe(v); resetSelection(); }}
         onStatusToggle={handleStatusToggle}
+        onAssignedTo={(v) => { setAssignedToFilter(v); resetSelection(); }}
       />
     </div>
   );
