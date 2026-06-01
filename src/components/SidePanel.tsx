@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Customer, Deactivation } from '@/lib/types';
+import { Customer, CustomerStatus, STATUS_CONFIG } from '@/lib/types';
 import RiskBadge from './RiskBadge';
 import YoYChart from './YoYChart';
 import YoYSummary from './YoYSummary';
@@ -17,11 +17,10 @@ interface SidePanelProps {
   initialComments?: { id: string; userId: string; text: string; createdAt: string; user: { name: string } }[];
   onCommentAdded?: (customerId: string) => void;
   onAllCommentsDeleted?: (customerId: string) => void;
-  // Deactivation
-  deactivation?: Deactivation | null;
+  // Status tag
+  customerStatus?: CustomerStatus | null;
   isAdmin?: boolean;
-  onDeactivate?: (customer: Customer) => void;
-  onReactivate?: (customer: Customer) => void;
+  onSetStatus?: (customer: Customer) => void;
 }
 
 type Tab = 'data' | 'comments';
@@ -34,10 +33,9 @@ export default function SidePanel({
   initialComments,
   onCommentAdded,
   onAllCommentsDeleted,
-  deactivation = null,
+  customerStatus = null,
   isAdmin = false,
-  onDeactivate,
-  onReactivate,
+  onSetStatus,
 }: SidePanelProps) {
   const [tab, setTab] = useState<Tab>('data');
 
@@ -81,24 +79,23 @@ export default function SidePanel({
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <RiskBadge riskLevel={customer.riskLevel} gapRatio={customer.gapRatio} />
-              {deactivation?.status === 'pending' && (
-                <span
-                  title={`Reason: ${deactivation.reason}`}
-                  className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                  Pending deactivation
-                </span>
-              )}
-              {deactivation?.status === 'active' && (
-                <span
-                  title={`Reason: ${deactivation.reason}`}
-                  className="inline-flex items-center gap-1 rounded-full bg-[#F3F4F6] px-2.5 py-0.5 text-[11px] font-medium text-[#6B7280] ring-1 ring-[#E5E7EB]"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#9CA3AF]" />
-                  Deactivated
-                </span>
-              )}
+              {customerStatus && (() => {
+                const cfg = STATUS_CONFIG[customerStatus.status];
+                const isPending = customerStatus.approvalStatus === 'pending';
+                return (
+                  <span
+                    title={customerStatus.reason ? `Reason: ${customerStatus.reason}` : undefined}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+                      isPending
+                        ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
+                        : `${cfg.bg} ${cfg.text} ring-1 ${cfg.ring}`
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${isPending ? 'bg-amber-500' : cfg.dot}`} />
+                    {isPending ? `Pending: ${cfg.label}` : cfg.label}
+                  </span>
+                );
+              })()}
             </div>
 
             {/* Tabs */}
@@ -155,44 +152,35 @@ export default function SidePanel({
               <OrderGapIndicator customer={customer} />
               <OrderList orders={customer.orders} />
 
-              {/* Deactivation actions */}
-              {(onDeactivate || onReactivate) && (
-                <div className="border-t border-[#F3F4F6] pt-5">
-                  {deactivation?.status === 'pending' ? (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-800">
-                      <p className="font-medium">Pending admin approval</p>
-                      <p className="mt-1 text-amber-700">
-                        Requested by {deactivation.requestedByName} —
-                        <span className="italic"> &ldquo;{deactivation.reason}&rdquo;</span>
+              {/* Status / tagging */}
+              {onSetStatus && (
+                <div className="border-t border-[#F3F4F6] pt-5 space-y-2">
+                  {/* Context line for current status */}
+                  {customerStatus && (customerStatus.reason || customerStatus.approvalStatus === 'pending') && (
+                    <div className="rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2.5 text-xs text-[#6B7280]">
+                      {customerStatus.approvalStatus === 'pending' && (
+                        <p className="font-medium text-amber-700">Pending admin approval</p>
+                      )}
+                      <p className={customerStatus.approvalStatus === 'pending' ? 'mt-1' : ''}>
+                        {customerStatus.setByName}
+                        {customerStatus.reason && (
+                          <>
+                            {' — '}
+                            <span className="italic">&ldquo;{customerStatus.reason}&rdquo;</span>
+                          </>
+                        )}
                       </p>
                     </div>
-                  ) : deactivation?.status === 'active' ? (
-                    <div className="space-y-2">
-                      <div className="rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-3 text-xs text-[#6B7280]">
-                        <p className="font-medium text-[#374151]">Deactivated</p>
-                        <p className="mt-1">
-                          {deactivation.approvedByName ?? deactivation.requestedByName} —
-                          <span className="italic"> &ldquo;{deactivation.reason}&rdquo;</span>
-                        </p>
-                      </div>
-                      {isAdmin && onReactivate && (
-                        <button
-                          onClick={() => onReactivate(customer)}
-                          className="cursor-pointer w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium text-[#374151] transition-colors hover:border-[#9CA3AF]"
-                        >
-                          Reactivate customer
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    onDeactivate && (
-                      <button
-                        onClick={() => onDeactivate(customer)}
-                        className="cursor-pointer w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
-                      >
-                        Deactivate customer
-                      </button>
-                    )
+                  )}
+
+                  {/* Show set-status button to anyone — unless team trying to touch a deactivated customer */}
+                  {(isAdmin || customerStatus?.status !== 'deactivated') && (
+                    <button
+                      onClick={() => onSetStatus(customer)}
+                      className="cursor-pointer w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium text-[#374151] transition-colors hover:border-[#9CA3AF]"
+                    >
+                      {customerStatus ? 'Change status' : 'Set status'}
+                    </button>
                   )}
                 </div>
               )}

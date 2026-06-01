@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Customer, SortField, SortDirection, Assignments, AdminUser, Deactivations } from '@/lib/types';
+import { Customer, SortField, SortDirection, Assignments, AdminUser, CustomerStatuses } from '@/lib/types';
 import CustomerRow from './CustomerRow';
 
 const PAGE_SIZE = 50;
@@ -13,7 +13,7 @@ interface CustomerTableProps {
   users: AdminUser[];
   customersWithComments: Set<string>;
   isTeam?: boolean;
-  deactivations?: Deactivations;
+  customerStatuses?: CustomerStatuses;
   onSelect: (id: string, shiftKey: boolean) => void;
   onSelectAll: (ids: string[]) => void;
   onClearAll: () => void;
@@ -47,7 +47,7 @@ export default function CustomerTable({
   users,
   customersWithComments,
   isTeam = false,
-  deactivations = {},
+  customerStatuses = {},
   onSelect,
   onSelectAll,
   onClearAll,
@@ -222,7 +222,7 @@ export default function CustomerTable({
                   hasComments={customersWithComments.has(customer.id)}
                   users={users}
                   isTeam={isTeam}
-                  deactivationStatus={deactivations[customer.id]?.status ?? null}
+                  customerStatus={customerStatuses[customer.id] ?? null}
                   onSelect={(id, shiftKey) => handleRowSelect(id, index, shiftKey)}
                   onClick={onClickCustomer}
                   onReassign={onReassign}

@@ -8,33 +8,35 @@ datasource db {
 }
 
 model User {
-  id                     String         @id @default(cuid())
-  name                   String
-  email                  String         @unique
-  passwordHash           String
-  role                   String         @default("team")
-  mustChangePass         Boolean        @default(true)
-  createdAt              DateTime       @default(now())
-  assignments            Assignment[]
-  comments               Comment[]
-  deactivationsRequested Deactivation[] @relation("DeactivationRequester")
-  deactivationsApproved  Deactivation[] @relation("DeactivationApprover")
-  notifications          Notification[]
+  id                String           @id @default(cuid())
+  name              String
+  email             String           @unique
+  passwordHash      String
+  role              String           @default("team")
+  mustChangePass    Boolean          @default(true)
+  createdAt         DateTime         @default(now())
+  assignments       Assignment[]
+  comments          Comment[]
+  statusesSet       CustomerStatus[] @relation("StatusSetter")
+  statusesApproved  CustomerStatus[] @relation("StatusApprover")
+  notifications     Notification[]
 }
 
-model Deactivation {
-  customerId    String    @id
-  customerName  String
-  status        String    // "pending" | "active"
-  reason        String
-  requestedById String
-  requestedAt   DateTime  @default(now())
-  approvedById  String?
-  approvedAt    DateTime?
-  requestedBy   User      @relation("DeactivationRequester", fields: [requestedById], references: [id], onDelete: Cascade)
-  approvedBy    User?     @relation("DeactivationApprover", fields: [approvedById], references: [id])
+model CustomerStatus {
+  customerId     String    @id
+  customerName   String
+  status         String    // 'deactivated' | 'dormant' | 'no_response' | 'possible' | 'seasonal' | 'hot'
+  approvalStatus String    @default("approved") // 'approved' | 'pending'
+  reason         String?
+  setById        String
+  setAt          DateTime  @default(now())
+  approvedById   String?
+  approvedAt     DateTime?
+  setBy          User      @relation("StatusSetter", fields: [setById], references: [id], onDelete: Cascade)
+  approvedBy     User?     @relation("StatusApprover", fields: [approvedById], references: [id])
 
   @@index([status])
+  @@index([approvalStatus])
 }
 
 model Notification {

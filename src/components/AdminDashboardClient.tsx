@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Customer, Assignments, AdminUser, Deactivations, AppNotification } from '@/lib/types';
+import { Customer, Assignments, AdminUser, CustomerStatuses, AppNotification } from '@/lib/types';
 import { parseCSV } from '@/lib/parseCSV';
 import CsvUploader from './CsvUploader';
 import Dashboard from './Dashboard';
@@ -29,7 +29,7 @@ interface Props {
   initialCustomersWithComments: string[];
   users: AdminUser[];
   currentUser: { id: string; name: string };
-  deactivations: Deactivations;
+  customerStatuses: CustomerStatuses;
   notifications: AppNotification[];
 }
 
@@ -39,7 +39,7 @@ export default function AdminDashboardClient({
   initialCustomersWithComments,
   users,
   currentUser,
-  deactivations,
+  customerStatuses,
   notifications,
 }: Props) {
   const router = useRouter();
@@ -187,7 +187,7 @@ export default function AdminDashboardClient({
         users={users}
         currentUser={currentUser}
         initialCustomersWithComments={initialCustomersWithComments}
-        deactivations={deactivations}
+        customerStatuses={customerStatuses}
         notifications={notifications}
         importStats={importStats}
         onAssign={handleAssign}

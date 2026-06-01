@@ -3,9 +3,9 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/db';
 
 /**
- * POST /api/deactivations/[id]/reject
- * Admin rejects a pending deactivation. The request is deleted, the requester
- * is notified, and other admins' notifications for it are cleared.
+ * POST /api/customer-statuses/[id]/reject
+ * Admin rejects a pending deactivation. Deletes the row, clears stale
+ * notifications, and notifies the team member who requested it.
  */
 export async function POST(
   _req: Request,
@@ -18,30 +18,28 @@ export async function POST(
 
   const { id: customerId } = await params;
 
-  const deactivation = await prisma.deactivation.findUnique({
-    where: { customerId },
-  });
+  const cs = await prisma.customerStatus.findUnique({ where: { customerId } });
 
-  if (!deactivation) {
-    return NextResponse.json({ error: 'Deactivation request not found.' }, { status: 404 });
+  if (!cs) {
+    return NextResponse.json({ error: 'Status not found.' }, { status: 404 });
   }
 
-  if (deactivation.status !== 'pending') {
+  if (cs.approvalStatus !== 'pending') {
     return NextResponse.json({ error: 'This request is no longer pending.' }, { status: 409 });
   }
 
   await prisma.$transaction([
-    prisma.deactivation.delete({ where: { customerId } }),
+    prisma.customerStatus.delete({ where: { customerId } }),
     prisma.notification.deleteMany({
       where: { type: 'deactivation_request', customerId },
     }),
     prisma.notification.create({
       data: {
-        userId: deactivation.requestedById,
+        userId: cs.setById,
         type: 'deactivation_rejected',
         customerId,
-        customerName: deactivation.customerName,
-        message: `${session.name} rejected your deactivation request for ${deactivation.customerName}.`,
+        customerName: cs.customerName,
+        message: `${session.name} rejected your deactivation request for ${cs.customerName}.`,
       },
     }),
   ]);

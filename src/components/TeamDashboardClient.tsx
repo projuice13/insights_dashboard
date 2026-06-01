@@ -1,10 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Customer, Assignments, AdminUser, Deactivations, AppNotification } from '@/lib/types';
+import { Customer, Assignments, AdminUser, CustomerStatuses, AppNotification } from '@/lib/types';
 import Dashboard from './Dashboard';
 
-// JSON serialises Date → string; convert them back after crossing the server/client boundary
 function rehydrateDates(customers: Customer[]): Customer[] {
   return customers.map((c) => ({
     ...c,
@@ -23,7 +22,7 @@ interface Props {
   users: AdminUser[];
   currentUser: { id: string; name: string };
   myAssignedIds: string[];
-  deactivations: Deactivations;
+  customerStatuses: CustomerStatuses;
   notifications: AppNotification[];
 }
 
@@ -34,7 +33,7 @@ export default function TeamDashboardClient({
   users,
   currentUser,
   myAssignedIds,
-  deactivations,
+  customerStatuses,
   notifications,
 }: Props) {
   const customers = useMemo(() => rehydrateDates(initialCustomers), [initialCustomers]);
@@ -47,7 +46,7 @@ export default function TeamDashboardClient({
       currentUser={currentUser}
       initialCustomersWithComments={initialCustomersWithComments}
       myAssignedIds={myAssignedIds}
-      deactivations={deactivations}
+      customerStatuses={customerStatuses}
       notifications={notifications}
     />
   );

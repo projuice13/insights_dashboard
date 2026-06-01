@@ -79,7 +79,7 @@ export default function NotificationsMenu({
   const handleApprove = async (n: AppNotification) => {
     setBusyId(n.id);
     try {
-      const res = await fetch(`/api/deactivations/${n.customerId}/approve`, { method: 'POST' });
+      const res = await fetch(`/api/customer-statuses/${n.customerId}/approve`, { method: 'POST' });
       if (!res.ok) throw new Error('Failed');
       // Remove the notification locally
       setNotifications((prev) => prev.filter((x) => x.id !== n.id));
@@ -94,7 +94,7 @@ export default function NotificationsMenu({
   const handleReject = async (n: AppNotification) => {
     setBusyId(n.id);
     try {
-      const res = await fetch(`/api/deactivations/${n.customerId}/reject`, { method: 'POST' });
+      const res = await fetch(`/api/customer-statuses/${n.customerId}/reject`, { method: 'POST' });
       if (!res.ok) throw new Error('Failed');
       setNotifications((prev) => prev.filter((x) => x.id !== n.id));
       router.refresh();

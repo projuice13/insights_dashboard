@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Customer, AdminUser } from '@/lib/types';
+import { Customer, AdminUser, CustomerStatus, STATUS_CONFIG } from '@/lib/types';
 import RiskBadge from './RiskBadge';
 
 interface CustomerRowProps {
@@ -11,7 +11,7 @@ interface CustomerRowProps {
   hasComments: boolean;
   users: AdminUser[];
   isTeam?: boolean;
-  deactivationStatus?: 'pending' | 'active' | null;
+  customerStatus?: CustomerStatus | null;
   onSelect: (id: string, shiftKey: boolean) => void;
   onClick: (customer: Customer) => void;
   onReassign: (id: string, userId: string | null) => void;
@@ -32,11 +32,18 @@ export default function CustomerRow({
   hasComments,
   users,
   isTeam = false,
-  deactivationStatus = null,
+  customerStatus = null,
   onSelect,
   onClick,
   onReassign,
 }: CustomerRowProps) {
+  const cfg = customerStatus ? STATUS_CONFIG[customerStatus.status] : null;
+  const isPendingDeactivation =
+    customerStatus?.status === 'deactivated' &&
+    customerStatus.approvalStatus === 'pending';
+  const isApprovedDeactivation =
+    customerStatus?.status === 'deactivated' &&
+    customerStatus.approvalStatus === 'approved';
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -76,7 +83,7 @@ export default function CustomerRow({
           <button
             onClick={() => onClick(customer)}
             className={`cursor-pointer inline-flex items-center gap-1.5 text-[13px] font-medium hover:underline text-left ${
-              deactivationStatus === 'active' ? 'text-[#9CA3AF]' : 'text-[#111827] hover:text-[#374151]'
+              isApprovedDeactivation ? 'text-[#9CA3AF]' : 'text-[#111827] hover:text-[#374151]'
             }`}
           >
             {customer.name}
@@ -84,19 +91,23 @@ export default function CustomerRow({
               <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#FBB03F]" title="Has comments" />
             )}
           </button>
-          {deactivationStatus === 'pending' && (
-            <span
-              title="Pending admin approval"
-              className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-amber-200"
-            >
-              <span className="h-1 w-1 rounded-full bg-amber-500" />
-              Pending
-            </span>
-          )}
-          {deactivationStatus === 'active' && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#F3F4F6] px-1.5 py-0.5 text-[10px] font-medium text-[#6B7280] ring-1 ring-[#E5E7EB]">
-              Deactivated
-            </span>
+          {customerStatus && cfg && (
+            isPendingDeactivation ? (
+              <span
+                title="Pending admin approval"
+                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-amber-200"
+              >
+                <span className="h-1 w-1 rounded-full bg-amber-500" />
+                Pending
+              </span>
+            ) : (
+              <span
+                title={customerStatus.reason ?? undefined}
+                className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ring-1 ${cfg.bg} ${cfg.text} ${cfg.ring}`}
+              >
+                {cfg.label}
+              </span>
+            )
           )}
         </div>
       </td>

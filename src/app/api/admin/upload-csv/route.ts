@@ -57,25 +57,27 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * If a customer was deactivated (or had a pending request) and a new order has
- * arrived for them, clear the deactivation record — they're clearly still trading.
- * Notify all admins so they have a trail of these auto-reactivations, and notify
- * the original requester if their pending request was overturned.
+ * If a customer was deactivated (or had a pending deactivation request) and a
+ * new order has arrived, clear that status — they're clearly still trading.
+ * Other status tags (Hot/Dormant/etc.) are kept untouched as they're informational.
  */
 async function reactivateIfOrdered(newOrders: RawOrder[]) {
   const newCustomerIds = Array.from(
     new Set(newOrders.map((o) => makeId(o.customer_name, o.postcode))),
   );
 
-  const deactivations = await prisma.deactivation.findMany({
-    where: { customerId: { in: newCustomerIds } },
+  // Only auto-clear DEACTIVATED status; other tags stay
+  const deactivated = await prisma.customerStatus.findMany({
+    where: {
+      customerId: { in: newCustomerIds },
+      status: 'deactivated',
+    },
   });
 
-  if (deactivations.length === 0) return;
+  if (deactivated.length === 0) return;
 
-  const customerIdsToReactivate = deactivations.map((d) => d.customerId);
+  const customerIdsToReactivate = deactivated.map((d) => d.customerId);
 
-  // Build notifications
   const admins = await prisma.user.findMany({
     where: { role: 'admin' },
     select: { id: true },
@@ -90,8 +92,7 @@ async function reactivateIfOrdered(newOrders: RawOrder[]) {
     message: string;
   }[] = [];
 
-  for (const d of deactivations) {
-    // Notify every admin
+  for (const d of deactivated) {
     for (const admin of admins) {
       notifications.push({
         userId: admin.id,
@@ -99,15 +100,14 @@ async function reactivateIfOrdered(newOrders: RawOrder[]) {
         customerId: d.customerId,
         customerName: d.customerName,
         message:
-          d.status === 'pending'
+          d.approvalStatus === 'pending'
             ? `${d.customerName} placed a new order — pending deactivation request cancelled.`
             : `${d.customerName} placed a new order — automatically reactivated.`,
       });
     }
-    // If a team member requested it, let them know it's been cancelled too
-    if (d.status === 'pending' && !adminIds.has(d.requestedById)) {
+    if (d.approvalStatus === 'pending' && !adminIds.has(d.setById)) {
       notifications.push({
-        userId: d.requestedById,
+        userId: d.setById,
         type: 'auto_reactivated',
         customerId: d.customerId,
         customerName: d.customerName,
@@ -117,15 +117,12 @@ async function reactivateIfOrdered(newOrders: RawOrder[]) {
   }
 
   await prisma.$transaction([
-    // Clear the deactivation records
-    prisma.deactivation.deleteMany({
+    prisma.customerStatus.deleteMany({
       where: { customerId: { in: customerIdsToReactivate } },
     }),
-    // Clear any stale "pending request" notifications now that the request is moot
     prisma.notification.deleteMany({
       where: { type: 'deactivation_request', customerId: { in: customerIdsToReactivate } },
     }),
-    // Create the new "auto-reactivated" notifications
     prisma.notification.createMany({ data: notifications }),
   ]);
 }

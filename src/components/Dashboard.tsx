@@ -9,9 +9,10 @@ import {
   SpendFilter,
   Assignments,
   AdminUser,
-  Deactivations,
+  CustomerStatuses,
+  CustomerStatusType,
   AppNotification,
-  DeactivationView,
+  StatusFilterValue,
 } from '@/lib/types';
 import { DateRange } from './DateRangePicker';
 import SummaryBar from './SummaryBar';
@@ -21,7 +22,7 @@ import SidePanel from './SidePanel';
 import SelectionActionBar from './SelectionActionBar';
 import SettingsMenu from './SettingsMenu';
 import NotificationsMenu from './NotificationsMenu';
-import DeactivateModal from './DeactivateModal';
+import StatusModal from './StatusModal';
 
 interface DashboardProps {
   customers: Customer[];
@@ -29,7 +30,7 @@ interface DashboardProps {
   users: AdminUser[];
   currentUser: { id: string; name: string };
   initialCustomersWithComments: string[];
-  deactivations: Deactivations;
+  customerStatuses: CustomerStatuses;
   notifications: AppNotification[];
   // Admin-only — omit these for team users
   importStats?: { imported: number; skipped: number } | null;
@@ -45,7 +46,7 @@ export default function Dashboard({
   users,
   currentUser,
   initialCustomersWithComments,
-  deactivations,
+  customerStatuses,
   notifications,
   importStats,
   myAssignedIds,
@@ -64,12 +65,23 @@ export default function Dashboard({
   const [riskLevels, setRiskLevels] = useState<Set<'high' | 'medium' | 'low'>>(new Set());
   const [hideAssigned, setHideAssigned] = useState(false);
   const [assignedToMe, setAssignedToMe] = useState(true); // team default: on
-  const [deactivationView, setDeactivationView] = useState<DeactivationView>('active');
+  // Default: all statuses selected EXCEPT 'deactivated' (matches old behaviour)
+  const [statusFilter, setStatusFilter] = useState<Set<StatusFilterValue>>(
+    () => new Set<StatusFilterValue>(['active', 'hot', 'possible', 'seasonal', 'no_response', 'dormant']),
+  );
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [activeCustomer, setActiveCustomer] = useState<Customer | null>(null);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
-  const [deactivatingCustomer, setDeactivatingCustomer] = useState<Customer | null>(null);
+  const [statusModalCustomer, setStatusModalCustomer] = useState<Customer | null>(null);
+
+  // Helper: default state of the status filter (used to detect "deviation from default")
+  const DEFAULT_STATUS_FILTER: ReadonlySet<StatusFilterValue> = new Set<StatusFilterValue>([
+    'active', 'hot', 'possible', 'seasonal', 'no_response', 'dormant',
+  ]);
+  const statusFilterIsDefault =
+    statusFilter.size === DEFAULT_STATUS_FILTER.size &&
+    Array.from(DEFAULT_STATUS_FILTER).every((s) => statusFilter.has(s));
   const [customersWithComments, setCustomersWithComments] = useState<Set<string>>(
     () => new Set(initialCustomersWithComments),
   );
@@ -96,9 +108,9 @@ export default function Dashboard({
     if (riskLevels.size > 0) count++;
     if (!isTeam && hideAssigned) count++;
     if (isTeam && !assignedToMe) count++;
-    if (!isTeam && deactivationView !== 'active') count++;
+    if (!isTeam && !statusFilterIsDefault) count++;
     return count;
-  }, [customerType, region, lastOrdered, spend, riskLevels, hideAssigned, assignedToMe, isTeam, deactivationView]);
+  }, [customerType, region, lastOrdered, spend, riskLevels, hideAssigned, assignedToMe, isTeam, statusFilterIsDefault]);
 
   const handleClearAllFilters = useCallback(() => {
     setCustomerType('standard');
@@ -108,7 +120,17 @@ export default function Dashboard({
     setRiskLevels(new Set());
     setHideAssigned(false);
     setAssignedToMe(true);
-    setDeactivationView('active');
+    setStatusFilter(new Set(['active', 'hot', 'possible', 'seasonal', 'no_response', 'dormant']));
+    resetSelection();
+  }, []);
+
+  const handleStatusToggle = useCallback((v: StatusFilterValue) => {
+    setStatusFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v);
+      else next.add(v);
+      return next;
+    });
     resetSelection();
   }, []);
 
@@ -117,15 +139,16 @@ export default function Dashboard({
       if (c.customerType !== customerType) return false;
       if (region !== 'all' && c.contactName.toLowerCase() !== region.toLowerCase()) return false;
 
-      // Deactivation filter (admin only; teams always see active behavior)
-      const deactivationStatus = deactivations[c.id]?.status;
-      if (!isTeam) {
-        if (deactivationView === 'active' && deactivationStatus === 'active') return false;
-        if (deactivationView === 'deactivated' && deactivationStatus !== 'active') return false;
-        // 'all' shows everything
+      // Status filtering
+      const cs = customerStatuses[c.id];
+      const effectiveStatus: StatusFilterValue =
+        cs && cs.approvalStatus === 'approved' ? cs.status : 'active';
+      // Approved 'deactivated' customers are hidden from team users full-stop.
+      // Pending deactivations are treated as 'active' so they stay visible until resolved.
+      if (isTeam) {
+        if (cs?.status === 'deactivated' && cs.approvalStatus === 'approved') return false;
       } else {
-        // Team users always see only non-deactivated customers
-        if (deactivationStatus === 'active') return false;
+        if (!statusFilter.has(effectiveStatus)) return false;
       }
 
       // Team: "Assigned to me" filter
@@ -156,7 +179,7 @@ export default function Dashboard({
     });
   }, [customers, customerType, region, lastOrdered, spend, riskLevels,
       hideAssigned, assignedToMe, isTeam, myAssignedSet, assignments,
-      deactivations, deactivationView]);
+      customerStatuses, statusFilter]);
 
   const searched = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -216,35 +239,31 @@ export default function Dashboard({
     });
   }, []);
 
-  // Deactivation handlers
-  const handleConfirmDeactivate = useCallback(
-    async (reason: string) => {
-      if (!deactivatingCustomer) return;
-      const res = await fetch(`/api/customers/${deactivatingCustomer.id}/deactivate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason, customerName: deactivatingCustomer.name }),
-      });
+  // Status-tag handlers
+  const handleConfirmStatus = useCallback(
+    async (status: CustomerStatusType | null, reason: string) => {
+      if (!statusModalCustomer) return;
+
+      let res: Response;
+      if (status === null) {
+        // Clear back to Active
+        res = await fetch(`/api/customers/${statusModalCustomer.id}/status`, { method: 'DELETE' });
+      } else {
+        res = await fetch(`/api/customers/${statusModalCustomer.id}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status, reason, customerName: statusModalCustomer.name }),
+        });
+      }
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? 'Deactivation failed.');
+        throw new Error(data.error ?? 'Failed to update status.');
       }
-      setDeactivatingCustomer(null);
-      setActiveCustomer(null);
+      setStatusModalCustomer(null);
+      // Keep the side panel open so the user sees the new status reflected
       router.refresh();
     },
-    [deactivatingCustomer, router],
-  );
-
-  const handleReactivate = useCallback(
-    async (customer: Customer) => {
-      const res = await fetch(`/api/customers/${customer.id}/reactivate`, { method: 'POST' });
-      if (res.ok) {
-        setActiveCustomer(null);
-        router.refresh();
-      }
-    },
-    [router],
+    [statusModalCustomer, router],
   );
 
   return (
@@ -367,7 +386,7 @@ export default function Dashboard({
           users={users}
           customersWithComments={customersWithComments}
           isTeam={isTeam}
-          deactivations={deactivations}
+          customerStatuses={customerStatuses}
           onSelect={handleSelect}
           onSelectAll={handleSelectAll}
           onClearAll={resetSelection}
@@ -383,18 +402,18 @@ export default function Dashboard({
         hasComments={activeCustomer ? customersWithComments.has(activeCustomer.id) : false}
         onCommentAdded={handleCommentAdded}
         onAllCommentsDeleted={handleAllCommentsDeleted}
-        deactivation={activeCustomer ? deactivations[activeCustomer.id] ?? null : null}
+        customerStatus={activeCustomer ? customerStatuses[activeCustomer.id] ?? null : null}
         isAdmin={isAdmin}
-        onDeactivate={setDeactivatingCustomer}
-        onReactivate={handleReactivate}
+        onSetStatus={setStatusModalCustomer}
       />
 
-      {deactivatingCustomer && (
-        <DeactivateModal
-          customerName={deactivatingCustomer.name}
+      {statusModalCustomer && (
+        <StatusModal
+          customerName={statusModalCustomer.name}
+          currentStatus={customerStatuses[statusModalCustomer.id]?.status ?? null}
           isTeam={isTeam}
-          onClose={() => setDeactivatingCustomer(null)}
-          onConfirm={handleConfirmDeactivate}
+          onClose={() => setStatusModalCustomer(null)}
+          onConfirm={handleConfirmStatus}
         />
       )}
 
@@ -412,7 +431,7 @@ export default function Dashboard({
         isTeam={isTeam}
         hideAssigned={hideAssigned}
         assignedToMe={assignedToMe}
-        deactivationView={deactivationView}
+        statusFilter={statusFilter}
         onCustomerType={(v) => { setCustomerType(v); resetSelection(); }}
         onRegion={(v) => { setRegion(v); resetSelection(); }}
         onLastOrdered={(v) => { setLastOrdered(v); resetSelection(); }}
@@ -420,7 +439,7 @@ export default function Dashboard({
         onRiskToggle={handleRiskToggle}
         onHideAssigned={(v) => { setHideAssigned(v); resetSelection(); }}
         onAssignedToMe={(v) => { setAssignedToMe(v); resetSelection(); }}
-        onDeactivationView={(v) => { setDeactivationView(v); resetSelection(); }}
+        onStatusToggle={handleStatusToggle}
       />
     </div>
   );

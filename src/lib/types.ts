@@ -65,22 +65,46 @@ export interface Customer {
 // assignments: Record<customerId, teamMemberName>
 export type Assignments = Record<string, string>;
 
-// One entry per customer that has been deactivated or has a pending deactivation request
-export interface Deactivation {
+// All possible customer status tags. 'active' is implicit (absence of any row).
+export type CustomerStatusType =
+  | 'deactivated'
+  | 'dormant'
+  | 'no_response'
+  | 'possible'
+  | 'seasonal'
+  | 'hot';
+
+// Display config for each status tag — bg/text/dot Tailwind classes are referenced
+// statically here so the JIT picks them up.
+export const STATUS_CONFIG: Record<
+  CustomerStatusType,
+  { label: string; bg: string; text: string; dot: string; ring: string }
+> = {
+  hot:         { label: 'Hot',         bg: 'bg-red-50',     text: 'text-red-700',     ring: 'ring-red-200',     dot: 'bg-red-500'    },
+  possible:    { label: 'Possible',    bg: 'bg-blue-50',    text: 'text-blue-700',    ring: 'ring-blue-200',    dot: 'bg-blue-500'   },
+  seasonal:    { label: 'Seasonal',    bg: 'bg-purple-50',  text: 'text-purple-700',  ring: 'ring-purple-200',  dot: 'bg-purple-500' },
+  no_response: { label: 'No Response', bg: 'bg-amber-50',   text: 'text-amber-700',   ring: 'ring-amber-200',   dot: 'bg-amber-500'  },
+  dormant:     { label: 'Dormant',     bg: 'bg-slate-50',   text: 'text-slate-700',   ring: 'ring-slate-200',   dot: 'bg-slate-500'  },
+  deactivated: { label: 'Deactivated', bg: 'bg-stone-100',  text: 'text-stone-700',   ring: 'ring-stone-200',   dot: 'bg-stone-500'  },
+};
+
+// One entry per customer with a non-default status (i.e. anything other than Active)
+export interface CustomerStatus {
   customerId: string;
   customerName: string;
-  status: 'pending' | 'active';
-  reason: string;
-  requestedById: string;
-  requestedByName: string;
-  requestedAt: string; // ISO
+  status: CustomerStatusType;
+  approvalStatus: 'approved' | 'pending';
+  reason: string | null;
+  setById: string;
+  setByName: string;
+  setAt: string; // ISO
   approvedById: string | null;
   approvedByName: string | null;
   approvedAt: string | null;
 }
 
-// Map of customerId → Deactivation (so a lookup is O(1))
-export type Deactivations = Record<string, Deactivation>;
+// Map of customerId → CustomerStatus (so a lookup is O(1))
+export type CustomerStatuses = Record<string, CustomerStatus>;
 
 export type NotificationType =
   | 'assignment'
@@ -122,5 +146,8 @@ export type CustomerTypeFilter = 'standard' | 'volume';
 export type RegionFilter = string; // 'all' or a specific contact name value
 export type SpendFilter = 'all' | '0-999' | '1000-1999' | '2000+';
 export type HideAssignedFilter = boolean;
-// 'active' = hide deactivated (default), 'all' = show both, 'deactivated' = only deactivated
-export type DeactivationView = 'active' | 'all' | 'deactivated';
+
+// Status filter: a Set of statuses that should appear in the list. 'active' represents
+// customers with no status row (the default tag). Default value when nothing filtered:
+// every status selected EXCEPT 'deactivated'.
+export type StatusFilterValue = 'active' | CustomerStatusType;

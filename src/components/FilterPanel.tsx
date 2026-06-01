@@ -1,7 +1,14 @@
 'use client';
 
 import { useEffect } from 'react';
-import { CustomerTypeFilter, RegionFilter, SpendFilter, DeactivationView } from '@/lib/types';
+import {
+  CustomerTypeFilter,
+  RegionFilter,
+  SpendFilter,
+  StatusFilterValue,
+  CustomerStatusType,
+  STATUS_CONFIG,
+} from '@/lib/types';
 import DateRangePicker, { DateRange } from './DateRangePicker';
 
 type RiskLevel = 'high' | 'medium' | 'low';
@@ -34,7 +41,7 @@ interface FilterPanelProps {
   isTeam?: boolean;
   hideAssigned: boolean;
   assignedToMe?: boolean;
-  deactivationView?: DeactivationView;
+  statusFilter?: Set<StatusFilterValue>;
 
   onCustomerType: (v: CustomerTypeFilter) => void;
   onRegion: (v: RegionFilter) => void;
@@ -43,7 +50,7 @@ interface FilterPanelProps {
   onRiskToggle: (v: RiskLevel) => void;
   onHideAssigned: (v: boolean) => void;
   onAssignedToMe?: (v: boolean) => void;
-  onDeactivationView?: (v: DeactivationView) => void;
+  onStatusToggle?: (v: StatusFilterValue) => void;
 }
 
 const selectClass =
@@ -63,7 +70,7 @@ export default function FilterPanel({
   isTeam = false,
   hideAssigned,
   assignedToMe = true,
-  deactivationView = 'active',
+  statusFilter,
   onCustomerType,
   onRegion,
   onLastOrdered,
@@ -71,7 +78,7 @@ export default function FilterPanel({
   onRiskToggle,
   onHideAssigned,
   onAssignedToMe,
-  onDeactivationView,
+  onStatusToggle,
 }: FilterPanelProps) {
   // Prevent body scroll while panel is open
   useEffect(() => {
@@ -222,28 +229,46 @@ export default function FilterPanel({
               </label>
             )}
 
-            {/* Deactivation view — admin only */}
-            {!isTeam && onDeactivationView && (
+            {/* Customer status — admin only (team members always see active + their pending) */}
+            {!isTeam && onStatusToggle && statusFilter && (
               <div>
                 <p className="mb-2 text-xs font-medium text-[#6B7280]">Customer status</p>
-                <div className="flex rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] p-0.5">
-                  {([
-                    { value: 'active', label: 'Active' },
-                    { value: 'all', label: 'All' },
-                    { value: 'deactivated', label: 'Deactivated' },
-                  ] as { value: DeactivationView; label: string }[]).map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => onDeactivationView(opt.value)}
-                      className={`flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs font-medium transition-all ${
-                        deactivationView === opt.value
-                          ? 'bg-white text-[#111827] shadow-sm ring-1 ring-[#E5E7EB]'
-                          : 'text-[#6B7280] hover:text-[#374151]'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
+                <div className="flex flex-wrap gap-1.5">
+                  {/* "Active" chip — customers with no tag set */}
+                  {(() => {
+                    const selected = statusFilter.has('active');
+                    return (
+                      <button
+                        onClick={() => onStatusToggle('active')}
+                        className={`cursor-pointer inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                          selected
+                            ? 'bg-green-50 text-green-700 ring-1 ring-green-200'
+                            : 'border border-[#E5E7EB] bg-white text-[#9CA3AF] hover:border-[#9CA3AF] hover:text-[#374151]'
+                        }`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${selected ? 'bg-green-500' : 'bg-[#D1D5DB]'}`} />
+                        Active
+                      </button>
+                    );
+                  })()}
+                  {(['hot', 'possible', 'seasonal', 'no_response', 'dormant', 'deactivated'] as CustomerStatusType[]).map((s) => {
+                    const cfg = STATUS_CONFIG[s];
+                    const selected = statusFilter.has(s);
+                    return (
+                      <button
+                        key={s}
+                        onClick={() => onStatusToggle(s)}
+                        className={`cursor-pointer inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                          selected
+                            ? `${cfg.bg} ${cfg.text} ring-1 ${cfg.ring}`
+                            : 'border border-[#E5E7EB] bg-white text-[#9CA3AF] hover:border-[#9CA3AF] hover:text-[#374151]'
+                        }`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${selected ? cfg.dot : 'bg-[#D1D5DB]'}`} />
+                        {cfg.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

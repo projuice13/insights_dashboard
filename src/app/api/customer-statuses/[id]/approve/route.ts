@@ -3,10 +3,12 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/db';
 
 /**
- * POST /api/deactivations/[id]/approve
- * Admin approves a pending deactivation request. The customer becomes deactivated.
- * The requester gets a confirmation notification. Other admins' pending-request
- * notifications for this customer are cleared.
+ * POST /api/customer-statuses/[id]/approve
+ * Admin approves a pending deactivation request. Updates the row to approved,
+ * clears stale pending-request notifications for other admins, and notifies
+ * the requester.
+ *
+ * [id] here is the customerId (primary key of CustomerStatus).
  */
 export async function POST(
   _req: Request,
@@ -17,43 +19,40 @@ export async function POST(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // The deactivation id IS the customerId (it's the primary key)
   const { id: customerId } = await params;
 
-  const deactivation = await prisma.deactivation.findUnique({
+  const cs = await prisma.customerStatus.findUnique({
     where: { customerId },
-    include: { requestedBy: { select: { name: true } } },
+    include: { setBy: { select: { name: true } } },
   });
 
-  if (!deactivation) {
-    return NextResponse.json({ error: 'Deactivation request not found.' }, { status: 404 });
+  if (!cs) {
+    return NextResponse.json({ error: 'Status not found.' }, { status: 404 });
   }
 
-  if (deactivation.status !== 'pending') {
+  if (cs.approvalStatus !== 'pending') {
     return NextResponse.json({ error: 'This request is no longer pending.' }, { status: 409 });
   }
 
   await prisma.$transaction([
-    prisma.deactivation.update({
+    prisma.customerStatus.update({
       where: { customerId },
       data: {
-        status: 'active',
+        approvalStatus: 'approved',
         approvedById: session.userId,
         approvedAt: new Date(),
       },
     }),
-    // Clear the pending-request notifications for all admins
     prisma.notification.deleteMany({
       where: { type: 'deactivation_request', customerId },
     }),
-    // Notify the requester
     prisma.notification.create({
       data: {
-        userId: deactivation.requestedById,
+        userId: cs.setById,
         type: 'deactivation_approved',
         customerId,
-        customerName: deactivation.customerName,
-        message: `${session.name} approved your deactivation request for ${deactivation.customerName}.`,
+        customerName: cs.customerName,
+        message: `${session.name} approved your deactivation request for ${cs.customerName}.`,
       },
     }),
   ]);

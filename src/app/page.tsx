@@ -1,13 +1,12 @@
 import { requireAdmin } from '@/lib/dal';
 import { prisma } from '@/lib/db';
 import { buildCustomers } from '@/lib/dataTransforms';
-import { RawOrder, Deactivations, AppNotification } from '@/lib/types';
+import { RawOrder, CustomerStatuses, CustomerStatusType, AppNotification } from '@/lib/types';
 import AdminDashboardClient from '@/components/AdminDashboardClient';
 
 export default async function AdminPage() {
   const session = await requireAdmin();
 
-  // Load all raw orders from DB and build the customer list
   const rows = await prisma.rawOrderRow.findMany();
   const rawOrders: RawOrder[] = rows.map((r) => ({
     sales_order_number: r.salesOrderNumber,
@@ -21,50 +20,47 @@ export default async function AdminPage() {
   }));
   const customers = rawOrders.length > 0 ? buildCustomers(rawOrders) : null;
 
-  // Assignments: { customerId → teamMemberName }
   const assignmentRows = await prisma.assignment.findMany({ include: { user: true } });
   const assignments: Record<string, string> = {};
   for (const a of assignmentRows) {
     assignments[a.customerId] = a.user.name;
   }
 
-  // All users for the assign dropdowns
   const users = await prisma.user.findMany({
     select: { id: true, name: true, email: true, role: true },
     orderBy: { name: 'asc' },
   });
 
-  // Customer IDs that have at least one comment
   const commentedCustomers = await prisma.comment.findMany({
     select: { customerId: true },
     distinct: ['customerId'],
   });
   const customersWithComments = commentedCustomers.map((c) => c.customerId);
 
-  // Deactivations (pending and active) — keyed by customerId for O(1) lookup
-  const deactivationRows = await prisma.deactivation.findMany({
+  // Customer status tags (deactivated, dormant, hot, etc.)
+  const statusRows = await prisma.customerStatus.findMany({
     include: {
-      requestedBy: { select: { name: true } },
+      setBy: { select: { name: true } },
       approvedBy: { select: { name: true } },
     },
   });
-  const deactivations: Deactivations = {};
-  for (const d of deactivationRows) {
-    deactivations[d.customerId] = {
-      customerId: d.customerId,
-      customerName: d.customerName,
-      status: d.status as 'pending' | 'active',
-      reason: d.reason,
-      requestedById: d.requestedById,
-      requestedByName: d.requestedBy.name,
-      requestedAt: d.requestedAt.toISOString(),
-      approvedById: d.approvedById,
-      approvedByName: d.approvedBy?.name ?? null,
-      approvedAt: d.approvedAt?.toISOString() ?? null,
+  const customerStatuses: CustomerStatuses = {};
+  for (const s of statusRows) {
+    customerStatuses[s.customerId] = {
+      customerId: s.customerId,
+      customerName: s.customerName,
+      status: s.status as CustomerStatusType,
+      approvalStatus: s.approvalStatus as 'approved' | 'pending',
+      reason: s.reason,
+      setById: s.setById,
+      setByName: s.setBy.name,
+      setAt: s.setAt.toISOString(),
+      approvedById: s.approvedById,
+      approvedByName: s.approvedBy?.name ?? null,
+      approvedAt: s.approvedAt?.toISOString() ?? null,
     };
   }
 
-  // Latest 50 notifications for this user
   const notificationRows = await prisma.notification.findMany({
     where: { userId: session.userId },
     orderBy: { createdAt: 'desc' },
@@ -87,7 +83,7 @@ export default async function AdminPage() {
       initialCustomersWithComments={customersWithComments}
       users={users}
       currentUser={{ id: session.userId, name: session.name }}
-      deactivations={deactivations}
+      customerStatuses={customerStatuses}
       notifications={notifications}
     />
   );
