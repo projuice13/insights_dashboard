@@ -28,6 +28,7 @@ interface Column {
   label: string;
   align?: 'right';
   sortable: boolean;
+  colWidth?: string; // Tailwind w-* class applied via <colgroup>
 }
 
 const COLUMNS: Column[] = [
@@ -35,10 +36,10 @@ const COLUMNS: Column[] = [
   { key: 'name',           label: 'Customer Name', sortable: true },
   { key: 'contactName',    label: 'Region',        sortable: true },
   { key: 'postcode',       label: 'Postcode',      sortable: true },
-  { key: 'totalOrders',    label: 'Orders',        sortable: true, align: 'right' },
-  { key: 'totalSpend',     label: 'Total Spend',   sortable: true, align: 'right' },
-  { key: 'lastOrderDate',  label: 'Last Order',    sortable: true, align: 'right' },
-  { key: 'status',         label: 'Status',        sortable: false },
+  { key: 'totalOrders',    label: 'Orders',        sortable: true,  align: 'right', colWidth: 'w-16' },
+  { key: 'totalSpend',     label: 'Total Spend',   sortable: true,  align: 'right' },
+  { key: 'lastOrderDate',  label: 'Last Order',    sortable: true,  align: 'right' },
+  { key: 'status',         label: 'Status',        sortable: false,                 colWidth: 'w-36' },
   { key: 'assigned',       label: 'Assigned',      sortable: false },
 ];
 
@@ -139,6 +140,12 @@ export default function CustomerTable({
           </div>
         ) : (
           <table className="w-full min-w-[960px] border-collapse text-left">
+            <colgroup>
+              {!isTeam && <col className="w-8" />}
+              {COLUMNS.map((col) => (
+                <col key={col.key} className={col.colWidth ?? ''} />
+              ))}
+            </colgroup>
             <thead>
               <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB]">
                 {!isTeam && (
