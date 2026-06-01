@@ -28,7 +28,7 @@ interface Column {
   label: string;
   align?: 'right';
   sortable: boolean;
-  colWidth?: string; // Tailwind w-* class applied via <colgroup>
+  colWidth?: string; // CSS width value e.g. '60px'
 }
 
 const COLUMNS: Column[] = [
@@ -36,10 +36,10 @@ const COLUMNS: Column[] = [
   { key: 'name',           label: 'Customer Name', sortable: true },
   { key: 'contactName',    label: 'Region',        sortable: true },
   { key: 'postcode',       label: 'Postcode',      sortable: true },
-  { key: 'totalOrders',    label: 'Orders',        sortable: true,  align: 'right', colWidth: 'w-16' },
+  { key: 'totalOrders',    label: 'Orders',        sortable: true,  align: 'right', colWidth: '60px' },
   { key: 'totalSpend',     label: 'Total Spend',   sortable: true,  align: 'right' },
   { key: 'lastOrderDate',  label: 'Last Order',    sortable: true,  align: 'right' },
-  { key: 'status',         label: 'Status',        sortable: false,                 colWidth: 'w-36' },
+  { key: 'status',         label: 'Status',        sortable: false,                 colWidth: '140px' },
   { key: 'assigned',       label: 'Assigned',      sortable: false },
 ];
 
@@ -141,9 +141,9 @@ export default function CustomerTable({
         ) : (
           <table className="w-full min-w-[960px] border-collapse text-left">
             <colgroup>
-              {!isTeam && <col className="w-8" />}
+              {!isTeam && <col style={{ width: '2rem' }} />}
               {COLUMNS.map((col) => (
-                <col key={col.key} className={col.colWidth ?? ''} />
+                <col key={col.key} style={col.colWidth ? { width: col.colWidth } : undefined} />
               ))}
             </colgroup>
             <thead>
