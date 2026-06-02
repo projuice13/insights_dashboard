@@ -35,7 +35,8 @@ export default function ReindexButton() {
       }
 
       setState('done');
-      setTimeout(() => setState('idle'), 4000);
+      // Trigger a page reload so the chunk count updates
+      setTimeout(() => window.location.reload(), 1500);
     } catch {
       setState('error');
       setTimeout(() => setState('idle'), 3000);

@@ -2,12 +2,22 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-export default function AskQuestion() {
+export default function AskQuestion({ isAdmin = false }: { isAdmin?: boolean }) {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [chunkCount, setChunkCount] = useState<number | null>(null);
   const answerRef = useRef<HTMLDivElement>(null);
+
+  // Check how many pages are indexed on mount
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetch('/api/helper/status')
+      .then((r) => r.json())
+      .then((d) => setChunkCount(d.total))
+      .catch(() => {});
+  }, [isAdmin]);
 
   // Scroll answer into view as it streams
   useEffect(() => {
@@ -55,6 +65,15 @@ export default function AskQuestion() {
 
   return (
     <div className="space-y-3">
+      {/* Admin: show indexed chunk count */}
+      {isAdmin && chunkCount !== null && (
+        <p className={`text-xs ${chunkCount === 0 ? 'text-red-500 font-medium' : 'text-[#9CA3AF]'}`}>
+          {chunkCount === 0
+            ? '⚠ Knowledge base is empty — click Re-index website above before asking questions.'
+            : `${chunkCount.toLocaleString()} content chunks indexed across the website.`}
+        </p>
+      )}
+
       {/* Input row */}
       <div className="flex gap-2">
         <input
@@ -99,10 +118,7 @@ export default function AskQuestion() {
 
       {/* Streaming answer */}
       {(answer || loading) && (
-        <div
-          ref={answerRef}
-          className="rounded-xl border border-[#E5E7EB] bg-white px-5 py-4"
-        >
+        <div ref={answerRef} className="rounded-xl border border-[#E5E7EB] bg-white px-5 py-4">
           <div className="mb-2 flex items-center gap-1.5">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#8B5CF6]" />
             <p className="text-[11px] font-medium uppercase tracking-wide text-[#9CA3AF]">

@@ -35,7 +35,7 @@ export default async function FaqsPage() {
           </div>
 
           {/* AI Q&A */}
-          <AskQuestion />
+          <AskQuestion isAdmin={session.role === 'admin'} />
 
           {/* Divider */}
           <div className="relative">
