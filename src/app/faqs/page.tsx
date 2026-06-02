@@ -23,7 +23,7 @@ export default async function FaqsPage() {
       <main className="flex flex-col items-center px-6 py-12">
         <div className="w-full max-w-[800px] space-y-6">
           <div>
-            <h1 className="text-2xl font-semibold text-[#111827]">Frequently Asked Questions</h1>
+            <h1 className="text-2xl font-semibold text-[#111827]">Helper</h1>
             <p className="mt-1 text-sm text-[#9CA3AF]">
               How-to guides and answers to common questions about your tools.
             </p>

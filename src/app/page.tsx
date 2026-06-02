@@ -106,7 +106,7 @@ export default async function HomePage() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[#111827]">FAQs</p>
+                  <p className="text-sm font-semibold text-[#111827]">Helper</p>
                   <p className="mt-0.5 text-xs text-[#9CA3AF]">Frequently asked questions and how-to guides</p>
                 </div>
               </div>
