@@ -27,8 +27,8 @@ export default async function HomePage() {
           {/* Logo */}
           <div className="flex justify-center">
             <Image
-              src="/box-logo.png"
-              alt="Box Logo"
+              src="/projuice-logo.png"
+              alt="Projuice Logo"
               width={180}
               height={80}
               className="object-contain"
