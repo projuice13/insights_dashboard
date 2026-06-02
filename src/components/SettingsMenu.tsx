@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { logoutAction } from '@/app/actions/auth';
-import ReindexButton from './ReindexButton';
 
 interface SettingsMenuProps {
   currentUser: { id: string; name: string };
@@ -99,8 +98,6 @@ export default function SettingsMenu({
                   />
                 </label>
               )}
-
-              <ReindexButton />
 
               {onReset && (
                 <button

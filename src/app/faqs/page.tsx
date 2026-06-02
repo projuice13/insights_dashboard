@@ -2,9 +2,10 @@ import Link from 'next/link';
 import { verifySession } from '@/lib/dal';
 import FaqAccordion from './FaqAccordion';
 import AskQuestion from './AskQuestion';
+import ReindexButton from '@/components/ReindexButton';
 
 export default async function FaqsPage() {
-  await verifySession();
+  const session = await verifySession();
 
   return (
     <div className="min-h-screen bg-[#F9FAFB]">
@@ -23,11 +24,14 @@ export default async function FaqsPage() {
 
       <main className="flex flex-col items-center px-6 py-12">
         <div className="w-full max-w-[800px] space-y-8">
-          <div>
-            <h1 className="text-2xl font-semibold text-[#111827]">Helper</h1>
-            <p className="mt-1 text-sm text-[#9CA3AF]">
-              Ask a question or browse the guides below.
-            </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold text-[#111827]">Helper</h1>
+              <p className="mt-1 text-sm text-[#9CA3AF]">
+                Ask a question or browse the guides below.
+              </p>
+            </div>
+            {session.role === 'admin' && <ReindexButton />}
           </div>
 
           {/* AI Q&A */}

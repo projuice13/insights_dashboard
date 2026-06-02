@@ -20,7 +20,6 @@ export default function ReindexButton() {
       const discoverRes = await fetch('/api/admin/crawl', { method: 'POST' });
       if (!discoverRes.ok) throw new Error('Discovery failed');
       const { urls, total } = await discoverRes.json() as { urls: string[]; total: number };
-
       setProgress({ done: 0, total });
 
       // Step 2: process in batches
@@ -46,15 +45,17 @@ export default function ReindexButton() {
   if (state === 'running') {
     const pct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
     return (
-      <div className="px-3.5 py-2">
-        <p className="text-xs text-[#9CA3AF]">Indexing website…</p>
+      <div className="min-w-[180px] rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-2.5">
+        <p className="text-xs text-[#6B7280]">Indexing website…</p>
         <div className="mt-1.5 h-1 w-full rounded-full bg-[#E5E7EB]">
           <div
             className="h-full rounded-full bg-[#8B5CF6] transition-all duration-300"
             style={{ width: `${pct}%` }}
           />
         </div>
-        <p className="mt-1 text-[11px] text-[#9CA3AF]">{progress.done} / {progress.total} pages</p>
+        <p className="mt-1 text-[11px] text-[#9CA3AF]">
+          {progress.done} / {progress.total} pages ({pct}%)
+        </p>
       </div>
     );
   }
@@ -62,14 +63,23 @@ export default function ReindexButton() {
   return (
     <button
       onClick={handleReindex}
-      className={`flex w-full items-center gap-2.5 px-3.5 py-2 text-sm transition-colors hover:bg-[#F9FAFB] ${
-        state === 'done' ? 'text-green-600' : state === 'error' ? 'text-red-500' : 'text-[#374151]'
+      className={`cursor-pointer inline-flex shrink-0 items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors ${
+        state === 'done'
+          ? 'border-green-200 bg-green-50 text-green-700'
+          : state === 'error'
+          ? 'border-red-200 bg-red-50 text-red-600'
+          : 'border-[#E5E7EB] bg-white text-[#374151] hover:border-[#9CA3AF]'
       }`}
     >
-      <svg className="h-3.5 w-3.5 shrink-0 text-[#9CA3AF]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className="h-3.5 w-3.5 shrink-0 text-[#9CA3AF]"
+        fill="none" viewBox="0 0 16 16"
+        stroke="currentColor" strokeWidth="1.5"
+        strokeLinecap="round" strokeLinejoin="round"
+      >
         <path d="M13.5 8A5.5 5.5 0 112.5 6M2.5 2.5V6H6" />
       </svg>
-      {state === 'done' ? 'Indexed!' : state === 'error' ? 'Failed — retry?' : 'Re-index knowledge base'}
+      {state === 'done' ? 'Indexed!' : state === 'error' ? 'Failed — retry?' : 'Re-index website'}
     </button>
   );
 }
