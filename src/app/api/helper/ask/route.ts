@@ -20,11 +20,18 @@ Never make up prices, product details, or delivery terms that aren't in the cont
 const STOP_WORDS = new Set([
   'what', 'does', 'have', 'with', 'that', 'this', 'from', 'your', 'tell',
   'about', 'which', 'are', 'the', 'and', 'for', 'our', 'any', 'can', 'you',
-  'how', 'many', 'some', 'does', 'into', 'them', 'they', 'will', 'been',
-  'was', 'has', 'its', 'also', 'just', 'more', 'such', 'like',
+  'how', 'many', 'some', 'into', 'them', 'they', 'will', 'been', 'was',
+  'has', 'its', 'also', 'just', 'more', 'such', 'like', 'when', 'where',
+  'there', 'their', 'then', 'than',
 ]);
 
-type Row = { id: string; url: string; title: string; content: string; pageType: string };
+function extractKeywords(question: string): string[] {
+  return question
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+}
 
 export async function POST(req: NextRequest) {
   await verifySession();
@@ -34,64 +41,63 @@ export async function POST(req: NextRequest) {
     return new Response('Question is required', { status: 400 });
   }
 
-  // Check if the knowledge base has been indexed at all
+  // Check if the knowledge base has been indexed
   const totalCount = await prisma.knowledgeChunk.count();
   if (totalCount === 0) {
     return new Response(
-      "The knowledge base hasn't been indexed yet — an admin needs to go to Settings and click 'Re-index knowledge base' first.",
+      "The knowledge base hasn't been indexed yet — an admin needs to go to the Helper page and click 'Re-index website' first.",
       { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } },
     );
   }
 
-  // 1️⃣ Full-text search
-  let chunks = await prisma.$queryRaw<Row[]>`
-    SELECT id, url, title, content, "pageType"
-    FROM "KnowledgeChunk"
-    WHERE to_tsvector('english', content || ' ' || title)
-          @@ plainto_tsquery('english', ${question})
-    ORDER BY ts_rank(
-      to_tsvector('english', content || ' ' || title),
-      plainto_tsquery('english', ${question})
-    ) DESC
-    LIMIT 6
-  `;
+  const keywords = extractKeywords(question);
 
-  // 2️⃣ Keyword ILIKE fallback — runs when full-text search returns nothing
-  if (chunks.length === 0) {
-    const keywords = question
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .split(/\s+/)
-      .filter((w) => w.length > 3 && !STOP_WORDS.has(w));
+  if (keywords.length === 0) {
+    return new Response(
+      "Please ask a more specific question.",
+      { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } },
+    );
+  }
 
-    const seen = new Set<string>();
-    for (const keyword of keywords.slice(0, 4)) {
-      if (chunks.length >= 6) break;
-      const pattern = `%${keyword}%`;
-      const found = await prisma.$queryRaw<Row[]>`
-        SELECT id, url, title, content, "pageType"
-        FROM "KnowledgeChunk"
-        WHERE content ILIKE ${pattern} OR title ILIKE ${pattern}
-        LIMIT 4
-      `;
-      for (const row of found) {
-        if (!seen.has(row.id)) {
-          seen.add(row.id);
-          chunks.push(row);
-        }
-      }
+  // Search: find chunks matching any keyword, score by how many they match
+  const seen = new Map<string, { chunk: typeof allChunks[0]; score: number }>();
+
+  const allChunks = await prisma.knowledgeChunk.findMany({
+    where: {
+      OR: keywords.flatMap((k) => [
+        { content: { contains: k, mode: 'insensitive' } },
+        { title: { contains: k, mode: 'insensitive' } },
+      ]),
+    },
+    select: { id: true, url: true, title: true, content: true, pageType: true },
+    take: 50, // fetch more, then rank
+  });
+
+  // Score each chunk by number of keywords matched
+  for (const chunk of allChunks) {
+    const text = (chunk.content + ' ' + chunk.title).toLowerCase();
+    const score = keywords.filter((k) => text.includes(k)).length;
+    const existing = seen.get(chunk.id);
+    if (!existing || score > existing.score) {
+      seen.set(chunk.id, { chunk, score });
     }
   }
 
-  if (chunks.length === 0) {
+  // Sort by score descending, take top 6
+  const ranked = [...seen.values()]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6)
+    .map((r) => r.chunk);
+
+  if (ranked.length === 0) {
     return new Response(
-      "I couldn't find anything relevant in the knowledge base for that question. Try rephrasing, or check projuice.co.uk directly.",
+      "I couldn't find anything relevant in the knowledge base for that question. Try using different keywords, or check projuice.co.uk directly.",
       { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } },
     );
   }
 
   // Build context
-  const context = chunks
+  const context = ranked
     .map((c) => `[Source: ${c.title} — ${c.url}]\n${c.content}`)
     .join('\n\n---\n\n');
 
