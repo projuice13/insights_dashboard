@@ -7,19 +7,28 @@ export async function GET() {
 
   const total = await prisma.knowledgeChunk.count();
 
-  // Check which URLs have been indexed
-  const indexed = await prisma.knowledgeChunk.findMany({
+  // Breakdown by page type
+  const byType = await prisma.knowledgeChunk.groupBy({
+    by: ['pageType'],
+    _count: { id: true },
+  });
+
+  // Sample PDF chunk if any exist
+  const pdfSample = await prisma.knowledgeChunk.findFirst({
+    where: { pageType: 'pdf' },
+    select: { url: true, content: true },
+  });
+
+  // Count distinct URLs
+  const urlCount = await prisma.knowledgeChunk.findMany({
     select: { url: true },
     distinct: ['url'],
   });
 
-  const urls = indexed.map((r) => r.url);
-
-  // Pull a sample chunk from the delivery page so we can verify content
-  const deliverySample = await prisma.knowledgeChunk.findFirst({
-    where: { url: { contains: 'delivery' } },
-    select: { url: true, content: true },
+  return NextResponse.json({
+    total,
+    distinctUrls: urlCount.length,
+    byType: Object.fromEntries(byType.map((r) => [r.pageType, r._count.id])),
+    pdfSample,
   });
-
-  return NextResponse.json({ total, urls, deliverySample });
 }
