@@ -13,17 +13,34 @@ Be concise and friendly. Use bullet points when listing multiple items.
 If the answer isn't covered by the provided content, say: "I don't have specific information about that — please check projuice.co.uk directly or ask the team."
 Never make up prices, product details, or delivery terms that aren't in the content.`;
 
+const STOP_WORDS = new Set([
+  'what', 'does', 'have', 'with', 'that', 'this', 'from', 'your', 'tell',
+  'about', 'which', 'are', 'the', 'and', 'for', 'our', 'any', 'can', 'you',
+  'how', 'many', 'some', 'does', 'into', 'them', 'they', 'will', 'been',
+  'was', 'has', 'its', 'also', 'just', 'more', 'such', 'like',
+]);
+
+type Row = { id: string; url: string; title: string; content: string; pageType: string };
+
 export async function POST(req: NextRequest) {
-  await verifySession(); // any logged-in user can ask
+  await verifySession();
 
   const { question } = (await req.json()) as { question: string };
   if (!question?.trim()) {
     return new Response('Question is required', { status: 400 });
   }
 
-  // Full-text search for relevant chunks
-  type Row = { id: string; url: string; title: string; content: string; pageType: string };
-  const chunks = await prisma.$queryRaw<Row[]>`
+  // Check if the knowledge base has been indexed at all
+  const totalCount = await prisma.knowledgeChunk.count();
+  if (totalCount === 0) {
+    return new Response(
+      "The knowledge base hasn't been indexed yet — an admin needs to go to Settings and click 'Re-index knowledge base' first.",
+      { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } },
+    );
+  }
+
+  // 1️⃣ Full-text search
+  let chunks = await prisma.$queryRaw<Row[]>`
     SELECT id, url, title, content, "pageType"
     FROM "KnowledgeChunk"
     WHERE to_tsvector('english', content || ' ' || title)
@@ -35,22 +52,48 @@ export async function POST(req: NextRequest) {
     LIMIT 6
   `;
 
-  // If no chunks found, return a helpful no-data message
+  // 2️⃣ Keyword ILIKE fallback — runs when full-text search returns nothing
+  if (chunks.length === 0) {
+    const keywords = question
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 3 && !STOP_WORDS.has(w));
+
+    const seen = new Set<string>();
+    for (const keyword of keywords.slice(0, 4)) {
+      if (chunks.length >= 6) break;
+      const pattern = `%${keyword}%`;
+      const found = await prisma.$queryRaw<Row[]>`
+        SELECT id, url, title, content, "pageType"
+        FROM "KnowledgeChunk"
+        WHERE content ILIKE ${pattern} OR title ILIKE ${pattern}
+        LIMIT 4
+      `;
+      for (const row of found) {
+        if (!seen.has(row.id)) {
+          seen.add(row.id);
+          chunks.push(row);
+        }
+      }
+    }
+  }
+
   if (chunks.length === 0) {
     return new Response(
-      "I don't have specific information about that in my knowledge base. The website may not have been indexed yet, or this topic isn't covered in the pages I've crawled. Please check projuice.co.uk directly or ask the team.",
+      "I couldn't find anything relevant in the knowledge base for that question. Try rephrasing, or check projuice.co.uk directly.",
       { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } },
     );
   }
 
-  // Build context string
+  // Build context
   const context = chunks
-    .map((c) => `[Source: ${c.title} (${c.url})]\n${c.content}`)
+    .map((c) => `[Source: ${c.title} — ${c.url}]\n${c.content}`)
     .join('\n\n---\n\n');
 
   const userMessage = `Website content:\n\n${context}\n\n---\n\nQuestion: ${question}`;
 
-  // Stream Claude's response
+  // Stream Claude's answer
   const stream = client.messages.stream({
     model: 'claude-3-5-haiku-20241022',
     max_tokens: 1024,
@@ -71,7 +114,7 @@ export async function POST(req: NextRequest) {
           }
         }
       } catch {
-        controller.enqueue(encoder.encode('\n\n[Error generating response]'));
+        controller.enqueue(encoder.encode('\n\n[Error generating response — please try again]'));
       } finally {
         controller.close();
       }
