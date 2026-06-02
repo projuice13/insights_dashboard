@@ -143,13 +143,19 @@ export function extractContent(url: string, html: string): PageContent {
     });
     content = parts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
   } else {
-    // Generic page
-    const parts: string[] = [];
-    parts.push(title);
-    parts.push(textFrom($, '.entry-content'));
-    parts.push(textFrom($, 'article'));
-    parts.push(textFrom($, 'main'));
-    content = parts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+    // Generic page — try specific WP/WooCommerce content wrappers first,
+    // then fall back to the whole <main> / <body> so nothing is missed.
+    const candidates = [
+      textFrom($, '.entry-content'),
+      textFrom($, '.page-content'),
+      textFrom($, 'article'),
+      textFrom($, 'main'),
+      // Last-resort: everything left after nav/header/footer removal
+      textFrom($, 'body'),
+    ];
+    // Use the first selector that returned meaningful text
+    const best = candidates.find((t) => t.length > 100) ?? candidates.join(' ');
+    content = [title, best].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
   }
 
   // Find PDF links on product pages
