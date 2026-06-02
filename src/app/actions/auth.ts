@@ -36,7 +36,7 @@ export async function loginAction(
     redirect('/change-password');
   }
 
-  redirect(user.role === 'admin' ? '/' : '/my-contacts');
+  redirect('/');
 }
 
 export async function logoutAction() {
@@ -67,5 +67,5 @@ export async function changePasswordAction(
     data: { passwordHash: hash, mustChangePass: false },
   });
 
-  redirect(session.role === 'admin' ? '/' : '/my-contacts');
+  redirect('/');
 }

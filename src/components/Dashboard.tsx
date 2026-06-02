@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Customer,
   CustomerTypeFilter,
@@ -304,9 +305,20 @@ export default function Dashboard({
     <div className="min-h-screen bg-[#F9FAFB]">
       <header className="border-b border-[#E5E7EB] bg-white px-6 py-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-[#111827] tracking-tight">
-            Customer Insights Dashboard
-          </h1>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 text-xs text-[#9CA3AF] transition-colors hover:text-[#374151]"
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 3L5 8l5 5" />
+              </svg>
+              Home
+            </Link>
+            <h1 className="text-lg font-semibold text-[#111827] tracking-tight">
+              Customer Insights Dashboard
+            </h1>
+          </div>
           <div className="flex items-center gap-2">
             <NotificationsMenu
               initialNotifications={notifications}

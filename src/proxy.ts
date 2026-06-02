@@ -16,14 +16,13 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL('/login', req.nextUrl));
   }
 
-  // Authenticated user hitting login → their home
+  // Authenticated user hitting login → landing page
   if (isPublic && session) {
-    const dest = session.role === 'admin' ? '/' : '/my-contacts';
-    return NextResponse.redirect(new URL(dest, req.nextUrl));
+    return NextResponse.redirect(new URL('/', req.nextUrl));
   }
 
-  // Team member trying to access admin routes → their view
-  if (session?.role === 'team' && path.startsWith('/admin')) {
+  // Team member trying to access admin-only routes → their view
+  if (session?.role === 'team' && (path.startsWith('/admin') || path.startsWith('/insights'))) {
     return NextResponse.redirect(new URL('/my-contacts', req.nextUrl));
   }
 
