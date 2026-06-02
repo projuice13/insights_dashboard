@@ -5,6 +5,10 @@ import { prisma } from '@/lib/db';
 
 export const maxDuration = 60;
 
+if (!process.env.ANTHROPIC_API_KEY) {
+  console.error('ANTHROPIC_API_KEY is not set');
+}
+
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const SYSTEM = `You are a helpful internal assistant for Projuice, a food service company.
@@ -113,8 +117,10 @@ export async function POST(req: NextRequest) {
             controller.enqueue(encoder.encode(event.delta.text));
           }
         }
-      } catch {
-        controller.enqueue(encoder.encode('\n\n[Error generating response — please try again]'));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('Anthropic stream error:', msg);
+        controller.enqueue(encoder.encode(`\n\n[Error: ${msg}]`));
       } finally {
         controller.close();
       }
