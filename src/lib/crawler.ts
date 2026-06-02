@@ -1,6 +1,8 @@
 import * as cheerio from 'cheerio';
 
-const BASE = 'https://projuice.co.uk';
+// The site uses www — sitemaps return www URLs so we must match both
+const BASE = 'https://www.projuice.co.uk';
+const SITEMAP_BASE = 'https://projuice.co.uk'; // canonical sitemap index entry point
 const FETCH_TIMEOUT = 12_000;
 
 // ── URL discovery ────────────────────────────────────────────────────────────
@@ -40,26 +42,23 @@ function parseSitemapUrls(xml: string): string[] {
   return matches.map((m) => m.replace(/<\/?loc>/g, '').trim());
 }
 
+// Only crawl these specific sitemaps — others (post_tag, product_tag, etc.) aren't useful
+const WANTED_SITEMAPS = ['product-sitemap.xml', 'product_cat-sitemap.xml', 'page-sitemap.xml'];
+
 /** Fetch the sitemap index and return crawlable page URLs. */
 export async function discoverUrls(): Promise<string[]> {
-  const indexXml = await fetchText(`${BASE}/sitemap_index.xml`);
+  const indexXml = await fetchText(`${SITEMAP_BASE}/sitemap_index.xml`);
   const sitemapUrls = parseSitemapUrls(indexXml).filter(
-    (u) => u.includes('sitemap') && u.endsWith('.xml'),
+    (u) => u.endsWith('.xml') && WANTED_SITEMAPS.some((w) => u.includes(w)),
   );
 
   const allPageUrls: string[] = [];
 
   for (const sitemapUrl of sitemapUrls) {
-    // Only crawl product, category, and page sitemaps
-    if (
-      !sitemapUrl.includes('product') &&
-      !sitemapUrl.includes('category') &&
-      !sitemapUrl.includes('page')
-    ) continue;
-
     const xml = await fetchText(sitemapUrl);
+    // Accept both www and non-www URLs from the sitemap
     const urls = parseSitemapUrls(xml).filter(
-      (u) => u.startsWith(BASE) && !u.endsWith('.xml'),
+      (u) => u.includes('projuice.co.uk') && !u.endsWith('.xml'),
     );
     allPageUrls.push(...urls);
   }
@@ -70,7 +69,7 @@ export async function discoverUrls(): Promise<string[]> {
 // ── Content extraction ───────────────────────────────────────────────────────
 
 function pageType(url: string): 'product' | 'category' | 'page' {
-  if (url.includes('/product-category/')) return 'category';
+  if (url.includes('/product-category/') || url.includes('/product_cat/')) return 'category';
   if (url.includes('/product/')) return 'product';
   return 'page';
 }
@@ -111,12 +110,18 @@ export function extractContent(url: string, html: string): PageContent {
   if (type === 'product') {
     const parts: string[] = [];
     parts.push(title);
-    parts.push(textFrom($, '.woocommerce-product-details__short-description'));
+    // Short description / intro
     parts.push(textFrom($, '.product-description'));
-    parts.push(textFrom($, '.woocommerce-tabs .entry-content'));
-    parts.push(textFrom($, '.woocommerce-product-attributes'));
+    parts.push(textFrom($, '.woocommerce-product-details__short-description'));
+    // Tabs: ingredients, nutrition, delivery info — this is where ingredients live
+    parts.push(textFrom($, '.tab-content'));
+    parts.push(textFrom($, '.woocommerce-tabs'));
+    // Fallback broad selectors
     parts.push(textFrom($, '.entry-content'));
     parts.push(textFrom($, '.summary'));
+    parts.push(textFrom($, '.woocommerce-product-attributes'));
+    // Catch-all: any element whose class contains 'ingredient', 'nutrition', 'allergen'
+    parts.push(textFrom($, '[class*="ingredient"], [class*="nutrition"], [class*="allergen"]'));
     content = parts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
   } else if (type === 'category') {
     const parts: string[] = [];
