@@ -48,6 +48,7 @@ const WANTED_SITEMAPS = ['product-sitemap.xml', 'product_cat-sitemap.xml', 'page
 // Pages that must always be indexed even if absent from the sitemap
 const ALWAYS_CRAWL = [
   'https://www.projuice.co.uk/delivery-information/',
+  'https://resources.projuice.co.uk/allergen-information/',
 ];
 
 /** Fetch the sitemap index and return crawlable page URLs. */
@@ -92,6 +93,45 @@ function textFrom($: cheerio.CheerioAPI, selector: string): string {
     .trim();
 }
 
+/**
+ * Extract tables in a structured way so header→cell relationships are preserved.
+ * e.g. "Product: Mango Smoothie | Gluten: No | Milk: No | Eggs: No"
+ * This is critical for allergen tables so the AI can answer "does X contain Y?"
+ */
+function extractTables($: cheerio.CheerioAPI): string {
+  const lines: string[] = [];
+
+  $('table').each((_, table) => {
+    // Try <th> in the first row as headers, fall back to first <td> row
+    let headers: string[] = [];
+    const firstRow = $(table).find('tr').first();
+    headers = firstRow.find('th').map((_, th) => $(th).text().trim()).get();
+    if (headers.length === 0) {
+      headers = firstRow.find('td').map((_, td) => $(td).text().trim()).get();
+    }
+
+    $(table).find('tr').each((rowIdx, row) => {
+      const cells = $(row).find('td').map((_, td) => $(td).text().trim()).get();
+      if (cells.length === 0) return; // header row, skip
+
+      if (headers.length > 0) {
+        // Map each cell to its column header
+        const parts = cells.map((cell, i) => {
+          const header = headers[i] ?? `Col${i + 1}`;
+          return `${header}: ${cell}`;
+        });
+        lines.push(parts.join(' | '));
+      } else {
+        lines.push(cells.join(' | '));
+      }
+    });
+
+    lines.push(''); // blank line between tables
+  });
+
+  return lines.join('\n').trim();
+}
+
 export interface PageContent {
   url: string;
   title: string;
@@ -130,6 +170,8 @@ export function extractContent(url: string, html: string): PageContent {
     parts.push(textFrom($, '.woocommerce-product-attributes'));
     // Catch-all: any element whose class contains 'ingredient', 'nutrition', 'allergen'
     parts.push(textFrom($, '[class*="ingredient"], [class*="nutrition"], [class*="allergen"]'));
+    // Structured table extraction (preserves column headers)
+    parts.push(extractTables($));
     content = parts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
   } else if (type === 'category') {
     const parts: string[] = [];
@@ -155,7 +197,9 @@ export function extractContent(url: string, html: string): PageContent {
     ];
     // Use the first selector that returned meaningful text
     const best = candidates.find((t) => t.length > 100) ?? candidates.join(' ');
-    content = [title, best].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+    // Always include structured table extraction for pages like the allergen table
+    const tables = extractTables($);
+    content = [title, best, tables].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
   }
 
   // Find PDF links on product pages
