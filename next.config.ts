@@ -1,14 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  webpack: (config) => {
-    // Required for unpdf (WASM-based PDF extraction)
-    config.experiments = {
-      ...config.experiments,
-      asyncWebAssembly: true,
-    };
-    return config;
-  },
+  // Turbopack is the default in Next.js 16 — WASM is supported natively
+  turbopack: {},
 };
 
 export default nextConfig;
