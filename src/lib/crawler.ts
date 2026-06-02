@@ -175,12 +175,11 @@ export function extractContent(url: string, html: string): PageContent {
 /** Parse a PDF buffer and return its text content. */
 export async function extractPdfText(buffer: Buffer): Promise<string> {
   try {
-    // Dynamic import via require to avoid pdf-parse loading test files at module init time
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>;
-    const data = await pdfParse(buffer);
-    return data.text.replace(/\s+/g, ' ').trim();
-  } catch {
+    const { extractText } = await import('unpdf');
+    const { text } = await extractText(new Uint8Array(buffer), { mergePages: true });
+    return text.replace(/\s+/g, ' ').trim();
+  } catch (err) {
+    console.error('PDF extraction error:', err);
     return '';
   }
 }
