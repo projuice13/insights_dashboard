@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-const BATCH_SIZE = 15;
+const BATCH_SIZE = 10;
 
 export default function ReindexButton() {
   const [state, setState] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
