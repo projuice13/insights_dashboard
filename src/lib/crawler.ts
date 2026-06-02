@@ -45,6 +45,11 @@ function parseSitemapUrls(xml: string): string[] {
 // Only crawl these specific sitemaps — others (post_tag, product_tag, etc.) aren't useful
 const WANTED_SITEMAPS = ['product-sitemap.xml', 'product_cat-sitemap.xml', 'page-sitemap.xml'];
 
+// Pages that must always be indexed even if absent from the sitemap
+const ALWAYS_CRAWL = [
+  'https://www.projuice.co.uk/delivery-information/',
+];
+
 /** Fetch the sitemap index and return crawlable page URLs. */
 export async function discoverUrls(): Promise<string[]> {
   const indexXml = await fetchText(`${SITEMAP_BASE}/sitemap_index.xml`);
@@ -62,6 +67,9 @@ export async function discoverUrls(): Promise<string[]> {
     );
     allPageUrls.push(...urls);
   }
+
+  // Always include hardcoded pages even if missing from sitemaps
+  allPageUrls.push(...ALWAYS_CRAWL);
 
   return [...new Set(allPageUrls)];
 }
