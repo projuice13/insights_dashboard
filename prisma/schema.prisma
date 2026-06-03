@@ -87,13 +87,3 @@ model Comment {
   @@index([customerId])
 }
 
-model KnowledgeChunk {
-  id        String   @id @default(cuid())
-  url       String
-  title     String
-  content   String
-  pageType  String   // 'product' | 'category' | 'page' | 'pdf'
-  indexedAt DateTime @default(now())
-
-  @@index([url])
-}
