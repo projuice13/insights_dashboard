@@ -93,6 +93,31 @@ export default async function HomePage() {
               </svg>
             </a>
 
+            {/* Delivery Portal */}
+            <a
+              href="https://delivery-portal-seven.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-6 py-5 shadow-sm transition-all hover:border-[#9CA3AF] hover:shadow-md"
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#10B981]">
+                  <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 8h18M3 8l2-4h14l2 4M3 8v10a1 1 0 001 1h16a1 1 0 001-1V8" />
+                    <circle cx="8.5" cy="19.5" r="1.5" fill="white" stroke="none" />
+                    <circle cx="15.5" cy="19.5" r="1.5" fill="white" stroke="none" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#111827]">Delivery Portal</p>
+                  <p className="mt-0.5 text-xs text-[#9CA3AF]">Manage and track customer deliveries</p>
+                </div>
+              </div>
+              <svg className="h-4 w-4 shrink-0 text-[#D1D5DB]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 3l5 5-5 5" />
+              </svg>
+            </a>
+
             {/* FAQs */}
             <Link
               href="/faqs"
