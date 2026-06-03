@@ -25,6 +25,7 @@ export default function SelectionActionBar({
   const [pendingUser, setPendingUser] = useState<AdminUser | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   if (selected.size === 0) return null;
 
@@ -33,7 +34,22 @@ export default function SelectionActionBar({
     selectedCustomers.length > 0 &&
     selectedCustomers.every((c) => assignments[c.id]);
 
-  const handleDownload = () => exportCustomersCSV(selectedCustomers);
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const res = await fetch('/api/comments/latest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerIds: selectedCustomers.map((c) => c.id) }),
+      });
+      const latestNotes = res.ok ? await res.json() : {};
+      exportCustomersCSV(selectedCustomers, latestNotes);
+    } catch {
+      exportCustomersCSV(selectedCustomers);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const handleUnassign = () => {
     onAssign(selectedCustomers.map((c) => c.id), null);
@@ -129,8 +145,15 @@ export default function SelectionActionBar({
 
           <button
             onClick={handleDownload}
-            className="cursor-pointer rounded-lg border border-[#E5E7EB] px-4 py-1.5 text-sm font-medium text-[#6B7280] transition-colors hover:border-[#9CA3AF] hover:text-[#374151]"
+            disabled={downloading}
+            className="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-[#E5E7EB] px-4 py-1.5 text-sm font-medium text-[#6B7280] transition-colors hover:border-[#9CA3AF] hover:text-[#374151] disabled:opacity-50"
           >
+            {downloading && (
+              <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+            )}
             Download CSV
           </button>
           <button
