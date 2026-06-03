@@ -105,7 +105,7 @@ export default function UsersClient({ initialUsers }: Props) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <a
-              href="/"
+              href="/insights"
               className="cursor-pointer text-sm text-[#6B7280] hover:text-[#374151]"
             >
               ← Dashboard
