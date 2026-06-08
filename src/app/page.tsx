@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { verifySession } from '@/lib/dal';
 import { logoutAction } from '@/app/actions/auth';
+import SendResourcesButton from '@/components/SendResourcesButton';
 
 export default async function HomePage() {
   const session = await verifySession();
@@ -118,7 +119,30 @@ export default async function HomePage() {
               </svg>
             </a>
 
-            {/* FAQs */}
+            {/* Resources Portal */}
+            <a
+              href="https://customer-portal-black.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-6 py-5 shadow-sm transition-all hover:border-[#9CA3AF] hover:shadow-md"
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F59E0B]">
+                  <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#111827]">Resources Portal</p>
+                  <p className="mt-0.5 text-xs text-[#9CA3AF]">Access product resources, guides and materials</p>
+                </div>
+              </div>
+              <svg className="h-4 w-4 shrink-0 text-[#D1D5DB]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 3l5 5-5 5" />
+              </svg>
+            </a>
+
+            {/* Helper */}
             <Link
               href="/faqs"
               className="flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-6 py-5 shadow-sm transition-all hover:border-[#9CA3AF] hover:shadow-md"
@@ -139,6 +163,11 @@ export default async function HomePage() {
                 <path d="M6 3l5 5-5 5" />
               </svg>
             </Link>
+          </div>
+
+          {/* Send resources link */}
+          <div className="flex justify-center">
+            <SendResourcesButton />
           </div>
         </div>
       </main>
