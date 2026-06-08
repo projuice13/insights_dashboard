@@ -119,6 +119,29 @@ export default async function HomePage() {
               </svg>
             </a>
 
+            {/* Create Order */}
+            <Link
+              href="/create-order"
+              className="flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-6 py-5 shadow-sm transition-all hover:border-[#9CA3AF] hover:shadow-md"
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#EF4444]">
+                  <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+                    <rect x="9" y="3" width="6" height="4" rx="1" />
+                    <path d="M9 12h6M9 16h4" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#111827]">Create Order</p>
+                  <p className="mt-0.5 text-xs text-[#9CA3AF]">Place a new customer order and view order history</p>
+                </div>
+              </div>
+              <svg className="h-4 w-4 shrink-0 text-[#D1D5DB]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 3l5 5-5 5" />
+              </svg>
+            </Link>
+
             {/* Resources Portal */}
             <a
               href="https://customer-portal-black.vercel.app/"

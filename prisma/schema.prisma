@@ -17,6 +17,7 @@ model User {
   createdAt         DateTime         @default(now())
   assignments       Assignment[]
   comments          Comment[]
+  orders            Order[]
   statusesSet       CustomerStatus[] @relation("StatusSetter")
   statusesApproved  CustomerStatus[] @relation("StatusApprover")
   notifications     Notification[]
@@ -74,6 +75,29 @@ model Assignment {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  postcode     String
+  address      String
+  businessName String
+  contactName  String
+  phone        String
+  openingTimes String
+  items        OrderItem[]
+  placedAt     DateTime    @default(now())
+  placedById   String
+  placedBy     User        @relation(fields: [placedById], references: [id])
+}
+
+model OrderItem {
+  id       String @id @default(cuid())
+  orderId  String
+  product  String
+  quantity Int
+  order    Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  @@index([orderId])
 }
 
 model Comment {
