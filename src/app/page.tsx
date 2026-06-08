@@ -165,27 +165,6 @@ export default async function HomePage() {
               </svg>
             </a>
 
-            {/* Helper */}
-            <Link
-              href="/faqs"
-              className="flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-6 py-5 shadow-sm transition-all hover:border-[#9CA3AF] hover:shadow-md"
-            >
-              <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#8B5CF6]">
-                  <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9.879 7.519c1.171-1.025 3.071-.966 4.242.036a3 3 0 01.29 4.229c-.29.36-.706.695-1.411 1.028C12 13.125 12 13.63 12 14.25" />
-                    <circle cx="12" cy="17.25" r=".75" fill="white" stroke="none" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-[#111827]">Helper</p>
-                  <p className="mt-0.5 text-xs text-[#9CA3AF]">Frequently asked questions and how-to guides</p>
-                </div>
-              </div>
-              <svg className="h-4 w-4 shrink-0 text-[#D1D5DB]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 3l5 5-5 5" />
-              </svg>
-            </Link>
           </div>
 
           {/* Send resources link */}
