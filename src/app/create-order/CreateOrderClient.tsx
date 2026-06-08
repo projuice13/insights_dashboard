@@ -21,6 +21,7 @@ interface PlacedOrder {
   postcode: string;
   phone: string;
   openingTimes: string;
+  deliveryInstructions: string;
   placedAt: string;
   placedBy: { name: string };
   items: { id: string; product: string; quantity: number }[];
@@ -50,6 +51,8 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
   const [contactName, setContactName] = useState('');
   const [phone, setPhone] = useState('');
   const [openingTimes, setOpeningTimes] = useState('');
+  const [hasDeliveryInstructions, setHasDeliveryInstructions] = useState(false);
+  const [deliveryInstructions, setDeliveryInstructions] = useState('');
   const [rows, setRows] = useState<Row[]>(() => makeRows(6));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -89,6 +92,7 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           postcode, address, businessName, contactName, phone, openingTimes,
+          deliveryInstructions: hasDeliveryInstructions ? deliveryInstructions : '',
           items: activeRows.map((r) => ({ product: r.product, quantity: r.quantity })),
         }),
       });
@@ -100,6 +104,7 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
       // Reset form
       setPostcode(''); setAddress(''); setBusinessName('');
       setContactName(''); setPhone(''); setOpeningTimes('');
+      setHasDeliveryInstructions(false); setDeliveryInstructions('');
       setRows(makeRows(6));
       onSubmitted();
     } catch (err) {
@@ -159,6 +164,33 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
             <label className={labelClass}>Opening times</label>
             <input value={openingTimes} onChange={(e) => setOpeningTimes(e.target.value)} className={inputClass} placeholder="Mon–Fri 8am–6pm" disabled={submitting} />
           </div>
+        </div>
+
+        {/* Delivery instructions toggle */}
+        <div className="mt-4 border-t border-[#F3F4F6] pt-4 space-y-3">
+          <label className="flex cursor-pointer items-center gap-2.5">
+            <input
+              type="checkbox"
+              checked={hasDeliveryInstructions}
+              onChange={(e) => { setHasDeliveryInstructions(e.target.checked); if (!e.target.checked) setDeliveryInstructions(''); }}
+              disabled={submitting}
+              className="h-4 w-4 cursor-pointer rounded border-[#D1D5DB] text-[#111827] focus:ring-0"
+            />
+            <span className="text-sm text-[#374151]">Add delivery instructions</span>
+          </label>
+          {hasDeliveryInstructions && (
+            <div>
+              <label className={labelClass}>Delivery instructions</label>
+              <textarea
+                value={deliveryInstructions}
+                onChange={(e) => setDeliveryInstructions(e.target.value)}
+                disabled={submitting}
+                placeholder="e.g. Leave at back door, call on arrival…"
+                rows={3}
+                className="w-full resize-y rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm text-[#111827] outline-none transition-colors focus:border-[#6B7280] disabled:bg-[#F9FAFB]"
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -360,6 +392,7 @@ function OrderHistory({ refreshKey }: { refreshKey: number }) {
                     ['Postcode', order.postcode],
                     ['Phone', order.phone],
                     ['Opening times', order.openingTimes],
+                  ...(order.deliveryInstructions ? [['Delivery instructions', order.deliveryInstructions]] : []),
                   ].map(([label, value]) => (
                     <div key={label}>
                       <span className="text-[#9CA3AF]">{label}: </span>

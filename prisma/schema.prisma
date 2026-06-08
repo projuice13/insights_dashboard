@@ -84,8 +84,9 @@ model Order {
   businessName String
   contactName  String
   phone        String
-  openingTimes String
-  items        OrderItem[]
+  openingTimes         String
+  deliveryInstructions String  @default("")
+  items                OrderItem[]
   placedAt     DateTime    @default(now())
   placedById   String
   placedBy     User        @relation(fields: [placedById], references: [id])

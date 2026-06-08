@@ -15,6 +15,7 @@ interface OrderBody {
   contactName: string;
   phone: string;
   openingTimes: string;
+  deliveryInstructions?: string;
   items: OrderItem[];
 }
 
@@ -39,6 +40,12 @@ function buildEmailText(order: OrderBody, placedBy: string): string {
     `Contact name:    ${order.contactName}`,
     `Phone:           ${order.phone}`,
     `Opening times:   ${order.openingTimes}`,
+    ...(order.deliveryInstructions ? [
+      ``,
+      `DELIVERY INSTRUCTIONS`,
+      `─────────────────────────────────────`,
+      order.deliveryInstructions,
+    ] : []),
     ``,
     `ORDER DETAILS`,
     `─────────────────────────────────────`,
@@ -62,6 +69,7 @@ export async function POST(req: NextRequest) {
       contactName: body.contactName,
       phone: body.phone,
       openingTimes: body.openingTimes,
+      deliveryInstructions: body.deliveryInstructions ?? '',
       placedById: session.userId,
       items: {
         create: body.items.map((i) => ({
