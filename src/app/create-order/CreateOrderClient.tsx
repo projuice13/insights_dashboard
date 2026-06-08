@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import ProductAutocomplete from '@/components/ProductAutocomplete';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,7 +43,7 @@ const labelClass = 'block text-xs font-medium text-[#6B7280] mb-1';
 
 // ── Form tab ─────────────────────────────────────────────────────────────────
 
-function OrderForm({ onSubmitted }: { onSubmitted: () => void }) {
+function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; products: string[] }) {
   const [postcode, setPostcode] = useState('');
   const [address, setAddress] = useState('');
   const [businessName, setBusinessName] = useState('');
@@ -174,11 +175,10 @@ function OrderForm({ onSubmitted }: { onSubmitted: () => void }) {
                 <tr key={row.id} className="border-b border-[#F3F4F6] last:border-b-0">
                   {/* Product */}
                   <td className="py-2 px-4">
-                    <input
+                    <ProductAutocomplete
                       value={row.product}
-                      onChange={(e) => updateRow(row.id, { product: e.target.value, confirmed: false })}
-                      className={inputClass}
-                      placeholder="Product name…"
+                      onChange={(v) => updateRow(row.id, { product: v, confirmed: false })}
+                      products={products}
                       disabled={submitting}
                     />
                   </td>
@@ -389,6 +389,15 @@ function OrderHistory({ refreshKey }: { refreshKey: number }) {
 export default function CreateOrderClient() {
   const [tab, setTab] = useState<'form' | 'history'>('form');
   const [historyKey, setHistoryKey] = useState(0);
+  const [products, setProducts] = useState<string[]>([]);
+
+  // Fetch product list once on mount
+  useEffect(() => {
+    fetch('/api/products')
+      .then((r) => r.json())
+      .then((data: string[]) => setProducts(data))
+      .catch(() => {}); // graceful fallback — user can still type freely
+  }, []);
 
   const handleSubmitted = () => {
     setHistoryKey((k) => k + 1);
@@ -433,7 +442,7 @@ export default function CreateOrderClient() {
       {/* Content */}
       <main className="mx-auto max-w-3xl px-6 py-8">
         {tab === 'form'
-          ? <OrderForm onSubmitted={handleSubmitted} />
+          ? <OrderForm onSubmitted={handleSubmitted} products={products} />
           : <OrderHistory refreshKey={historyKey} />
         }
       </main>
