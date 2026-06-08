@@ -57,7 +57,14 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
 
   const activeRows = rows.filter((r) => r.product.trim());
   const allConfirmed = activeRows.length > 0 && activeRows.every((r) => r.confirmed);
-  const canSubmit = allConfirmed && businessName.trim() && postcode.trim();
+  const canSubmit =
+    allConfirmed &&
+    businessName.trim() &&
+    postcode.trim() &&
+    address.trim() &&
+    contactName.trim() &&
+    phone.trim() &&
+    openingTimes.trim();
 
   const updateRow = (id: string, patch: Partial<Row>) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -251,7 +258,9 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
       {/* Submit */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-[#9CA3AF]">
-          {activeRows.length === 0
+          {!businessName.trim() || !postcode.trim() || !address.trim() || !contactName.trim() || !phone.trim() || !openingTimes.trim()
+            ? 'All customer details fields are required.'
+            : activeRows.length === 0
             ? 'Add at least one product to place an order.'
             : !allConfirmed
             ? 'Check the Confirm box for each product before placing.'
