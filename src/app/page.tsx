@@ -1,8 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { verifySession } from '@/lib/dal';
-import { logoutAction } from '@/app/actions/auth';
 import SendResourcesButton from '@/components/SendResourcesButton';
+import SettingsMenu from '@/components/SettingsMenu';
 
 export default async function HomePage() {
   const session = await verifySession();
@@ -12,14 +12,10 @@ export default async function HomePage() {
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col">
       {/* Top bar */}
       <div className="flex justify-end px-6 py-4">
-        <form action={logoutAction}>
-          <button
-            type="submit"
-            className="cursor-pointer text-sm text-[#9CA3AF] transition-colors hover:text-[#374151]"
-          >
-            Sign out
-          </button>
-        </form>
+        <SettingsMenu
+          currentUser={{ id: session.userId, name: session.name }}
+          isTeam={session.role !== 'admin'}
+        />
       </div>
 
       {/* Main container */}
