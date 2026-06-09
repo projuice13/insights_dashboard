@@ -3,12 +3,14 @@
 import { useState } from 'react';
 
 // Update this default message whenever needed
-const DEFAULT_MESSAGE = `Hi,
+const DEFAULT_MESSAGE = `Hello,
 
-We'd like to invite you to access the Projuice Resources Portal, where you can find product information, spec sheets, and more.
+As discussed, I'm inviting you to access the Projuice Resources Portal, where you can find product information, promotional imagery, profit calculators & more.
 
 You can access the portal here:
-https://customer-portal-black.vercel.app/
+https://resources.projuice.com/
+
+If prompted to enter a password on the product info page, please enter the word: grapes
 
 Please get in touch if you have any questions.
 
