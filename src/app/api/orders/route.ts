@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
   });
 
   // Send email notifications (non-blocking — don't fail the order if email fails)
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM_NAME,
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM_NAME, SMTP_FROM_EMAIL,
           ORDER_NOTIFY_EMAIL_1, ORDER_NOTIFY_EMAIL_2 } = process.env;
 
   const recipients = [ORDER_NOTIFY_EMAIL_1, ORDER_NOTIFY_EMAIL_2].filter(Boolean) as string[];
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       });
 
       await transporter.sendMail({
-        from: `"${SMTP_FROM_NAME ?? 'Projuice Portal'}" <${SMTP_USER}>`,
+        from: `"${SMTP_FROM_NAME ?? 'Projuice Portal'}" <${SMTP_FROM_EMAIL ?? SMTP_USER}>`,
         to: recipients.join(', '),
         subject: `New Order — ${body.businessName}`,
         text: buildEmailText(body, session.name),

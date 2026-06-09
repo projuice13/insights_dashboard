@@ -5,7 +5,7 @@ import { verifySession } from '@/lib/dal';
 export async function POST(req: NextRequest) {
   await verifySession();
 
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM_NAME } = process.env;
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM_NAME, SMTP_FROM_EMAIL } = process.env;
 
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
     return NextResponse.json(
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await transporter.sendMail({
-      from: `"${SMTP_FROM_NAME ?? 'Projuice'}" <${SMTP_USER}>`,
+      from: `"${SMTP_FROM_NAME ?? 'Projuice'}" <${SMTP_FROM_EMAIL ?? SMTP_USER}>`,
       to: to.trim(),
       subject: 'Your Projuice Resources Portal Access',
       text: message,
