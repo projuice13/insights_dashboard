@@ -10,7 +10,7 @@ As discussed, I'm inviting you to access the Projuice Resources Portal, where yo
 You can access the portal here:
 https://resources.projuice.com/
 
-If prompted to enter a password on the product info page, please enter the word: grapes
+If prompted to enter a password on the product info page, please enter the word: **grapes**
 
 Please get in touch if you have any questions.
 
@@ -101,7 +101,9 @@ export default function SendResourcesModal({ onClose }: { onClose: () => void })
 
               {/* Message */}
               <div>
-                <label className="block text-xs font-medium text-[#6B7280]">Message</label>
+                <label className="block text-xs font-medium text-[#6B7280]">
+                  Message <span className="font-normal text-[#9CA3AF]">— wrap a word in **double asterisks** to make it bold</span>
+                </label>
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}

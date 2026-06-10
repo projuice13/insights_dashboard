@@ -27,12 +27,25 @@ export async function POST(req: NextRequest) {
     auth: { user: SMTP_USER, pass: SMTP_PASS },
   });
 
+  // Convert **word** markdown-style bold into HTML <strong> tags,
+  // escape remaining HTML, and turn line breaks into <br>.
+  const escapeHtml = (str: string) =>
+    str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const htmlBody = escapeHtml(message)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+
+  // Plain-text fallback: strip the ** markers
+  const textBody = message.replace(/\*\*(.+?)\*\*/g, '$1');
+
   try {
     await transporter.sendMail({
       from: `"${SMTP_FROM_NAME ?? 'Projuice'}" <${SMTP_FROM_EMAIL ?? SMTP_USER}>`,
       to: to.trim(),
       subject: 'Your Projuice Resources Portal Access',
-      text: message,
+      text: textBody,
+      html: htmlBody,
     });
 
     return NextResponse.json({ ok: true });
