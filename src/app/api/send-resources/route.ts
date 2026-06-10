@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
 
   const htmlBody = escapeHtml(message)
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#2563eb;">$1</a>')
     .replace(/\n/g, '<br>');
 
   // Plain-text fallback: strip the ** markers
