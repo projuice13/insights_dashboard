@@ -68,7 +68,7 @@ export default async function HomePage() {
 
             {/* Postcode Checker */}
             <a
-              href="https://projuice-postcode-checker.vercel.app/"
+              href="https://customer-portal-black.vercel.app/postcode-checker"
               target="_blank"
               rel="noopener noreferrer"
               className="flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-6 py-5 shadow-sm transition-all hover:border-[#9CA3AF] hover:shadow-md"
