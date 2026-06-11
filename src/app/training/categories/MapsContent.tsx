@@ -20,29 +20,101 @@ const POSTCODE_ZONES = [
 
 const FROZEN_SCHEDULE = [
   {
-    area: 'Central North',
-    cities: 'Liverpool, Manchester, Warrington, Wigan, Bolton, Oldham, Huddersfield, Halifax, Wakefield',
-    service: 'Frozen delivery to the Central North areas — Mondays to Fridays between 6am and 3pm. Deliveries are generally made within 2 working days where orders are received by 10am the preceding day (this may be subject to change due to order volumes).',
-    postcodes: 'L, WN, WA, BL, M, OL, HX, HD, WF, LS',
+    area: 'Greater London',
+    cities: '',
+    service: 'Mondays to Fridays between 6:30am and 3:30pm. Deliveries are generally made within 2 working days where orders are received by 10am the preceding day (this may be subject to change due to order volumes).',
+  },
+  {
+    area: 'Birmingham',
+    cities: '',
+    service: 'Thursdays (and occasionally Tuesdays depending on order volume) between 6:30am and 3:30pm, where orders are received by 10am the preceding working day (this may be subject to change due to order volumes).',
+  },
+  {
+    area: 'Leicester & Coventry',
+    cities: '',
+    service: 'Tuesdays or Thursdays between 6:30am and 3:30pm, where orders are received by 10am the preceding working day (this may be subject to change due to order volumes).',
+  },
+  {
+    area: 'North (Central)',
+    cities: 'Liverpool, Manchester, Leeds, Warrington, Wigan, Bolton, Oldham, Huddersfield, Halifax & Wakefield',
+    service: 'Mondays to Fridays between 6:30am and 3:30pm. Deliveries are generally made within 2 working days where orders are received by 10am the preceding day (this may be subject to change due to order volumes).',
   },
   {
     area: 'North West',
-    cities: 'Preston, Blackburn, Bradford, Lancashire',
-    service: 'Frozen delivery to the North West area — Deliveries are generally made on Fridays between 6am and 3pm where orders are received by 10am the preceding day (this may be subject to change due to order volumes).',
-    postcodes: 'FY, PR, BB, BD',
+    cities: 'Preston, Blackburn, Blackpool, Bradford & Lancashire',
+    service: 'Deliveries are generally made on Fridays between 6:30am and 3:30pm where orders are received by 10am the preceding day (this may be subject to change due to order volumes).',
   },
   {
     area: 'North East',
-    cities: 'Newcastle, Durham, Harrogate, York, Darlington, Middlesbrough',
-    service: 'Frozen delivery to the North East area — Deliveries are generally made on Wednesdays or Thursdays between 6am and 3pm where orders are received by 10am on Tuesdays (this may be subject to change due to order volumes).',
-    postcodes: 'NE18, NE45, NE44, NE43, NE42, NE17, NE39, NE16, NE11, NE9, NE38, NE15, NE41, NE40, NE21, NE8, NE10, NE35, NE36, NE34, NE32, NE31, NE33, NE20, NE13, NE5, NE4, NE3, NE2, NE1, NE6, NE7, NE12, NE27, NE28, NE29, NE30, NE25, NE26, NE23, NE24, NE22, NE62, NE63, NE64, YO1, YO24, YO23, YO31, YO10, YO19, YO8, YO26, YO30, YO32, YO51, YO61, YO60, YO7, YO62, YO18, YO13, YO22, YO21, DH, DL, TS, HG',
+    cities: 'Newcastle, Durham, Harrogate, York, Darlington & Middlesbrough',
+    service: 'Deliveries are generally made on Wednesdays or Thursdays between 6:30am and 3:30pm where orders are received by 10am on Tuesdays (this may be subject to change due to order volumes).',
   },
   {
     area: 'North Midlands',
-    cities: 'Chester, Crewe, Stockport, Sheffield, Telford, Stoke on Trent, Doncaster, Derby, Nottingham, Staffordshire',
-    service: 'Frozen delivery to the North Midlands area — Deliveries are generally made on Tuesdays or Thursdays between 6am and 3pm where orders are received by 10am the preceding day (this may be subject to change due to order volumes).',
-    postcodes: 'DN14, DN6, DN5, DN12, DN1, DN2, DN3, DN4, DN9, DN10, DN11, DN7, DN8, DN15, DN16, DN17, NG, S, DE, SK, ST, TF, CW, CH',
+    cities: 'Chester, Crewe, Stockport, Sheffield, Telford, Stoke on Trent, Doncaster, Derby & Nottingham',
+    service: 'Deliveries are generally made on Tuesdays or Thursdays between 6:30am and 3:30pm where orders are received by 10am the preceding day (this may be subject to change due to order volumes).',
   },
+  {
+    area: 'Scotland',
+    cities: '',
+    service: 'Order before 10am on a Tuesday for delivery on a Thursday or Friday of that week (this may be subject to change due to order volumes).',
+  },
+  {
+    area: 'Bristol, South Wales & Bath',
+    cities: '',
+    service: 'Tuesdays or Wednesdays between 6:30am and 3:30pm, where orders are received by 10am the preceding day (this may be subject to change due to order volumes).',
+  },
+  {
+    area: 'South Devon & Cornwall',
+    cities: '',
+    service: 'Fridays between 6:30am and 3:30pm, where orders are received by 10am the preceding day (this may be subject to change due to order volumes).',
+  },
+  {
+    area: 'South Coast',
+    cities: '',
+    service: 'Fridays between 6:30am and 3:30pm, where orders are received by 10am the preceding day (this may be subject to change due to order volumes).',
+  },
+  {
+    area: 'Gloucester & Worcester',
+    cities: '',
+    service: 'Tuesdays or Thursdays between 6:30am and 3:30pm, where orders are received by 10am the preceding working day (this may be subject to change due to order volumes).',
+  },
+  {
+    area: 'Oxford, Luton & Milton Keynes',
+    cities: '',
+    service: 'Wednesdays between 6:30am and 3:30pm, where orders are received by 10am the preceding working day (this may be subject to change due to order volumes).',
+  },
+  {
+    area: 'Cambridge, Southend & Chelmsford',
+    cities: '',
+    service: 'Thursdays between 6:30am and 3:30pm, where orders are received by 10am the preceding working day (this may be subject to change due to order volumes).',
+  },
+  {
+    area: 'All other areas',
+    cities: '',
+    service: 'Please continue to place your order and we will call to confirm your delivery day.',
+  },
+];
+
+const FROZEN_CHARGES = [
+  ['1', '£55', '£70'],
+  ['2', '£50', '£65'],
+  ['3', '£45', '£60'],
+  ['4', '£40', '£55'],
+  ['5', '£35', '£50'],
+  ['6', '£30', '£45'],
+  ['7', '£25', '£40'],
+  ['8', '£20', '£35'],
+  ['9', '£15', '£30'],
+  ['10', '£10', '£25'],
+  ['11', '£5', '£20'],
+  ['12', 'FREE delivery', '£15'],
+  ['13', '£5 discount', '£10'],
+  ['14', '£10 discount', '£5'],
+  ['15', '£15 discount', 'FREE delivery'],
+  ['16', '£15 discount', '£5 discount'],
+  ['17', '£15 discount', '£10 discount'],
+  ['18+', '£15 discount', '£15 discount'],
 ];
 
 const FSP_PROVIDERS = [
@@ -110,14 +182,50 @@ export default function MapsContent() {
           {FROZEN_SCHEDULE.map((row) => (
             <div key={row.area} className="px-5 py-4">
               <p className="text-sm font-semibold text-[#111827]">{row.area}</p>
-              <p className="mt-0.5 text-xs text-[#9CA3AF]">{row.cities}</p>
+              {row.cities && <p className="mt-0.5 text-xs text-[#9CA3AF]">{row.cities}</p>}
               <p className="mt-2 text-sm text-[#374151]">{row.service}</p>
-              <p className="mt-2 text-xs text-[#6B7280]">
-                <span className="font-medium uppercase tracking-wide text-[#9CA3AF]">Postcodes: </span>
-                {row.postcodes}
-              </p>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Frozen delivery charges */}
+      <div className={cardClass}>
+        <h3 className={sectionTitleClass}>Frozen Delivery Charges</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB]">
+                <th className={thClass}>Boxes</th>
+                <th className={thClass}>England</th>
+                <th className={thClass}>Scotland</th>
+              </tr>
+            </thead>
+            <tbody>
+              {FROZEN_CHARGES.map(([boxes, england, scotland], i) => (
+                <tr key={i} className="border-b border-[#F3F4F6] last:border-0">
+                  <td className={`${tdClass} font-medium text-[#111827] whitespace-nowrap`}>{boxes}</td>
+                  <td className={tdClass}>{england}</td>
+                  <td className={tdClass}>{scotland}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="border-t border-[#F3F4F6] bg-[#F9FAFB] px-5 py-3">
+          <p className="text-sm text-[#6B7280]">
+            Scotland pricing as of Monday 13th April 2026.
+          </p>
+        </div>
+      </div>
+
+      {/* Ambient only delivery */}
+      <div className={cardClass}>
+        <h3 className={sectionTitleClass}>Ambient Only Delivery</h3>
+        <div className="space-y-3 px-5 py-4 text-sm text-[#374151]">
+          <p>If your basket consists entirely of non frozen/ambient products, a flat-fee of £5.95 will apply. Prices exclude VAT.</p>
+          <p>Ambient-only orders are typically dispatched using DHL&apos;s next-day delivery service; however, Projuice cannot guarantee next-day arrival.</p>
+          <p>Please note deliveries to Northern Ireland and Scotland may take longer and may incur a delivery surcharge.</p>
         </div>
       </div>
 
