@@ -7,6 +7,7 @@ import ContactsContent from './categories/ContactsContent';
 import DhlContent from './categories/DhlContent';
 import OrderProcessingContent from './categories/OrderProcessingContent';
 import StreamContent from './categories/StreamContent';
+import WebsiteContent from './categories/WebsiteContent';
 
 interface Category {
   key: string;
@@ -19,6 +20,7 @@ const CATEGORIES: Category[] = [
   { key: 'contacts', label: 'Contacts', content: <ContactsContent /> },
   { key: 'dhl', label: 'DHL', content: <DhlContent /> },
   { key: 'order-processing', label: 'Order Processing', content: <OrderProcessingContent /> },
+  { key: 'website', label: 'Website', content: <WebsiteContent /> },
   { key: 'stream', label: 'Stream', content: <StreamContent /> },
 ];
 
