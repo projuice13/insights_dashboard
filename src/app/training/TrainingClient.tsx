@@ -4,6 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import MapsContent from './categories/MapsContent';
 import ContactsContent from './categories/ContactsContent';
+import DhlContent from './categories/DhlContent';
+import OrderProcessingContent from './categories/OrderProcessingContent';
+import StreamContent from './categories/StreamContent';
 
 interface Category {
   key: string;
@@ -14,6 +17,9 @@ interface Category {
 const CATEGORIES: Category[] = [
   { key: 'maps', label: 'Delivery Info', content: <MapsContent /> },
   { key: 'contacts', label: 'Contacts', content: <ContactsContent /> },
+  { key: 'dhl', label: 'DHL', content: <DhlContent /> },
+  { key: 'order-processing', label: 'Order Processing', content: <OrderProcessingContent /> },
+  { key: 'stream', label: 'Stream', content: <StreamContent /> },
 ];
 
 export default function TrainingClient() {
