@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import MapsContent from './categories/MapsContent';
+import ContactsContent from './categories/ContactsContent';
 
 interface Category {
   key: string;
@@ -12,6 +13,7 @@ interface Category {
 
 const CATEGORIES: Category[] = [
   { key: 'maps', label: 'Maps', content: <MapsContent /> },
+  { key: 'contacts', label: 'Contacts', content: <ContactsContent /> },
 ];
 
 export default function TrainingClient() {
