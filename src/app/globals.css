@@ -8,3 +8,24 @@ body {
   background-color: #F9FAFB;
   color: #111827;
 }
+
+@media print {
+  body {
+    background-color: #fff;
+  }
+
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  table {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed;
+  }
+
+  th, td {
+    white-space: normal !important;
+    word-break: break-word;
+  }
+}
