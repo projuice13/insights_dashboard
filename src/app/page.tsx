@@ -161,6 +161,28 @@ export default async function HomePage() {
               </svg>
             </a>
 
+            {/* Training */}
+            <Link
+              href="/training"
+              className="flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-6 py-5 shadow-sm transition-all hover:border-[#9CA3AF] hover:shadow-md"
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#8B5CF6]">
+                  <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 4L2 9l10 5 10-5-10-5z" />
+                    <path d="M6 11.5V16c0 1.1 2.69 2 6 2s6-.9 6-2v-4.5" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#111827]">Training</p>
+                  <p className="mt-0.5 text-xs text-[#9CA3AF]">Reference guides and resources for staff</p>
+                </div>
+              </div>
+              <svg className="h-4 w-4 shrink-0 text-[#D1D5DB]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 3l5 5-5 5" />
+              </svg>
+            </Link>
+
           </div>
 
           {/* Send resources link */}

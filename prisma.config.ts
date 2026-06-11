@@ -5,8 +5,8 @@ import { defineConfig } from "prisma/config";
 // We pass through whatever's set (or an empty string for generate, which
 // doesn't need a connection); migrate deploy will fail loudly if missing.
 const migrateUrl =
-  process.env.POSTGRES_URL_NON_POOLING ??
-  process.env.DATABASE_URL ??
+  process.env.POSTGRES_URL_NON_POOLING ||
+  process.env.DATABASE_URL ||
   '';
 
 export default defineConfig({
