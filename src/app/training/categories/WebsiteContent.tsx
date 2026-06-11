@@ -1,6 +1,18 @@
-import { SectionCard, DataTable } from './components';
+import { SectionCard, StepList, DataTable, type StepItem } from './components';
 
 // ── Data ─────────────────────────────────────────────────────────────────────
+
+const ORDER_FLOW: StepItem[] = [
+  {
+    text: 'Basket — the customer adds products to their basket, which slides out as a panel from the right-hand side of the page.',
+  },
+  {
+    text: 'Checkout — when the customer proceeds to checkout, they can select, add or edit addresses in their address library and add delivery instructions.',
+  },
+  {
+    text: 'Payment (externally hosted) — after clicking "Place Order", the customer is taken to a payment page hosted by Lloyds Cardnet (not on our website), for security purposes. Payment is taken and the customer is then returned to the website.',
+  },
+];
 
 const WEBSITE_ERRORS_HEADERS = ['Category', 'Issue', 'What it means', 'Likely cause', 'Actions', 'Escalation'];
 
@@ -66,6 +78,10 @@ export default function WebsiteContent() {
           Common website errors and how to handle them.
         </p>
       </div>
+
+      <SectionCard title="Customer Order Flow (Projuice / Crops Website)">
+        <StepList items={ORDER_FLOW} ordered />
+      </SectionCard>
 
       <SectionCard title="Potential Website Errors">
         <DataTable headers={WEBSITE_ERRORS_HEADERS} rows={WEBSITE_ERRORS} minWidth="1100px" />

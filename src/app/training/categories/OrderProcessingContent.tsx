@@ -2,18 +2,6 @@ import { SectionCard, StepList, DataTable, NotesBlock, type StepItem } from './c
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 
-const ORDER_FLOW: StepItem[] = [
-  {
-    text: 'Basket — the customer adds products to their basket, which slides out as a panel from the right-hand side of the page.',
-  },
-  {
-    text: 'Checkout — when the customer proceeds to checkout, they can select, add or edit addresses in their address library and add delivery instructions.',
-  },
-  {
-    text: 'Payment (externally hosted) — after clicking "Place Order", the customer is taken to a payment page hosted by Lloyds Cardnet (not on our website), for security purposes. Payment is taken and the customer is then returned to the website.',
-  },
-];
-
 const PHONE_ORDER_STEPS: StepItem[] = [
   "Take customer's delivery postcode",
   'Bring up a new order and input account name',
@@ -250,10 +238,6 @@ export default function OrderProcessingContent() {
           The customer order flow and processing orders in SAGE.
         </p>
       </div>
-
-      <SectionCard title="Customer Order Flow (Projuice / Crops Website)">
-        <StepList items={ORDER_FLOW} ordered />
-      </SectionCard>
 
       <SectionCard title="Processing Orders Over the Phone">
         <StepList items={PHONE_ORDER_STEPS} ordered />
