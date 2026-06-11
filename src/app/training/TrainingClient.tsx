@@ -12,7 +12,7 @@ interface Category {
 }
 
 const CATEGORIES: Category[] = [
-  { key: 'maps', label: 'Maps', content: <MapsContent /> },
+  { key: 'maps', label: 'Delivery Info', content: <MapsContent /> },
   { key: 'contacts', label: 'Contacts', content: <ContactsContent /> },
 ];
 

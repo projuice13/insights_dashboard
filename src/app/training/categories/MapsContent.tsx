@@ -69,7 +69,7 @@ export default function MapsContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-[#111827]">Maps</h2>
+        <h2 className="text-lg font-semibold text-[#111827]">Delivery Info</h2>
         <p className="mt-1 text-sm text-[#9CA3AF]">
           Delivery zone reference maps and schedules.
         </p>
