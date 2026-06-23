@@ -8,7 +8,7 @@ const DEFAULT_MESSAGE = `Hello,
 As discussed, I'm inviting you to access the Projuice Resources Portal, where you can find product information, promotional imagery, profit calculators & more.
 
 You can access the portal here:
-https://resources.projuice.com/
+https://resources.projuice.co.uk/
 
 If prompted to enter a password on the product info page, please enter the word: **grapes**
 
