@@ -102,9 +102,11 @@ export async function POST(req: NextRequest) {
       text: [
         `Hi ${firstName},`,
         '',
-        `Please find attached a list of ${count} customer${count === 1 ? '' : 's'} for follow-up.`,
+        `You've just been assigned the following customer${count === 1 ? '' : 's'} in the Insights Dashboard:`,
         '',
-        `The spreadsheet includes a Notes column — please add the outcome of each contact attempt and return it when done.`,
+        ...customers.map((c) => `• ${c.name} | ${c.contactName} | ${c.postcode}`),
+        '',
+        'You can login here: https://insights-dashboard-five.vercel.app/',
         '',
         'Thanks',
       ].join('\n'),
