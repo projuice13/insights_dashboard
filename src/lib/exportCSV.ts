@@ -11,6 +11,7 @@ function esc(value: string): string {
 export function exportCustomersCSV(
   customers: Customer[],
   latestNotes: Record<string, { text: string; createdAt: string; userName: string }> = {},
+  assignments: Record<string, string> = {},
 ) {
   const headers = [
     'customer_name',
@@ -22,6 +23,7 @@ export function exportCustomersCSV(
     'last_order_date',
     'risk_score',
     'risk_level',
+    'assigned_to',
     'latest_note',
     'latest_note_by',
     'latest_note_date',
@@ -39,6 +41,7 @@ export function exportCustomersCSV(
       formatDate(c.lastOrderDate),
       c.gapRatio.toFixed(1),
       c.riskLevel,
+      assignments[c.id] ? esc(assignments[c.id]) : '""',
       note ? esc(note.text) : '""',
       note ? esc(note.userName) : '""',
       note ? note.createdAt.split('T')[0] : '""',

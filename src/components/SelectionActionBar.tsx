@@ -43,9 +43,9 @@ export default function SelectionActionBar({
         body: JSON.stringify({ customerIds: selectedCustomers.map((c) => c.id) }),
       });
       const latestNotes = res.ok ? await res.json() : {};
-      exportCustomersCSV(selectedCustomers, latestNotes);
+      exportCustomersCSV(selectedCustomers, latestNotes, assignments);
     } catch {
-      exportCustomersCSV(selectedCustomers);
+      exportCustomersCSV(selectedCustomers, {}, assignments);
     } finally {
       setDownloading(false);
     }
