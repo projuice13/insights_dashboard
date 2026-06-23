@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Check config is present
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM_NAME } = process.env;
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM_NAME, SMTP_FROM_EMAIL } = process.env;
 
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
     return NextResponse.json(
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await transporter.sendMail({
-      from: `"${SMTP_FROM_NAME ?? 'Customer Churn Dashboard'}" <${SMTP_USER}>`,
+      from: `"${SMTP_FROM_NAME ?? 'Customer Churn Dashboard'}" <${SMTP_FROM_EMAIL ?? SMTP_USER}>`,
       to: teamMember.email,
       subject: `Customer follow-up list — ${today}`,
       text: [
