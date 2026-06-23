@@ -381,10 +381,11 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
 
 // ── History tab ───────────────────────────────────────────────────────────────
 
-function OrderHistory({ refreshKey }: { refreshKey: number }) {
+function OrderHistory({ refreshKey, isAdmin }: { refreshKey: number; isAdmin: boolean }) {
   const [orders, setOrders] = useState<PlacedOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -397,6 +398,17 @@ function OrderHistory({ refreshKey }: { refreshKey: number }) {
   }, []);
 
   useEffect(() => { load(); }, [load, refreshKey]);
+
+  const handleDelete = async (id: string) => {
+    setDeleting(id);
+    try {
+      await fetch(`/api/orders/${id}`, { method: 'DELETE' });
+      setOrders((prev) => prev.filter((o) => o.id !== id));
+      if (expanded === id) setExpanded(null);
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -446,6 +458,20 @@ function OrderHistory({ refreshKey }: { refreshKey: number }) {
                   <p className="text-xs text-[#9CA3AF]">{date}</p>
                   <p className="text-xs text-[#9CA3AF]">by {order.placedBy.name}</p>
                 </div>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(order.id); }}
+                    disabled={deleting === order.id}
+                    className="cursor-pointer text-[#D1D5DB] transition-colors hover:text-red-400 disabled:opacity-40"
+                    title="Delete"
+                  >
+                    {deleting === order.id
+                      ? <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                      : <svg className="h-4 w-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 4h10M5.5 4V2.5h5V4M6.5 7v5M9.5 7v5M4 4l.75 9.5h6.5L12 4"/></svg>
+                    }
+                  </button>
+                )}
                 <svg
                   className={`h-4 w-4 shrink-0 text-[#9CA3AF] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                   fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -507,7 +533,7 @@ function OrderHistory({ refreshKey }: { refreshKey: number }) {
 
 // ── Page shell ────────────────────────────────────────────────────────────────
 
-export default function CreateOrderClient() {
+export default function CreateOrderClient({ isAdmin }: { isAdmin: boolean }) {
   const [tab, setTab] = useState<'form' | 'history'>('form');
   const [historyKey, setHistoryKey] = useState(0);
   const [products, setProducts] = useState<string[]>([]);
@@ -564,7 +590,7 @@ export default function CreateOrderClient() {
       <main className="mx-auto max-w-3xl px-6 py-8">
         {tab === 'form'
           ? <OrderForm onSubmitted={handleSubmitted} products={products} />
-          : <OrderHistory refreshKey={historyKey} />
+          : <OrderHistory refreshKey={historyKey} isAdmin={isAdmin} />
         }
       </main>
     </div>
