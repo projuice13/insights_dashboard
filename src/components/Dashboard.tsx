@@ -24,6 +24,7 @@ import SelectionActionBar from './SelectionActionBar';
 import SettingsMenu from './SettingsMenu';
 import NotificationsMenu from './NotificationsMenu';
 import StatusModal from './StatusModal';
+import AssignModal from './AssignModal';
 
 interface DashboardProps {
   customers: Customer[];
@@ -76,6 +77,9 @@ export default function Dashboard({
   const [activeCustomer, setActiveCustomer] = useState<Customer | null>(null);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [statusModalCustomer, setStatusModalCustomer] = useState<Customer | null>(null);
+  const [pendingAssign, setPendingAssign] = useState<{ customer: Customer; user: AdminUser } | null>(null);
+  const [assignSending, setAssignSending] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
   // Local copy of statuses so we can update the badge instantly (optimistic),
   // then let router.refresh() sync the server data in the background.
   const [localStatuses, setLocalStatuses] = useState<CustomerStatuses>(customerStatuses);
@@ -233,7 +237,59 @@ export default function Dashboard({
   const handleReassign = (customerId: string, userId: string | null) => {
     if (!onAssign) return;
     const user = userId ? users.find((u) => u.id === userId) ?? null : null;
-    onAssign([customerId], user);
+    if (!user) {
+      // Unassign — no confirmation needed
+      onAssign([customerId], null);
+      return;
+    }
+    const customer = customers.find((c) => c.id === customerId);
+    if (!customer) return;
+    setAssignError(null);
+    setPendingAssign({ customer, user });
+  };
+
+  const handleConfirmDirectAssign = async () => {
+    if (!pendingAssign || !onAssign) return;
+    setAssignSending(true);
+    setAssignError(null);
+
+    const { customer, user } = pendingAssign;
+
+    try {
+      const res = await fetch('/api/send-assignment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customers: [{
+            name: customer.name,
+            email: customer.email,
+            postcode: customer.postcode,
+            contactName: customer.contactName,
+            customerType: customer.customerType,
+            totalSpend: customer.totalSpend,
+            lastOrderDate: customer.lastOrderDate instanceof Date
+              ? customer.lastOrderDate.toISOString().split('T')[0]
+              : customer.lastOrderDate,
+            gapRatio: customer.gapRatio,
+            riskLevel: customer.riskLevel,
+          }],
+          teamMember: { name: user.name, email: user.email },
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setAssignError(data.error ?? 'Something went wrong. Please try again.');
+        return;
+      }
+
+      onAssign([customer.id], user);
+      setPendingAssign(null);
+    } catch {
+      setAssignError('Could not reach the server. Make sure the app is running.');
+    } finally {
+      setAssignSending(false);
+    }
   };
 
   const handleCommentAdded = useCallback((customerId: string) => {
@@ -463,6 +519,19 @@ export default function Dashboard({
           isTeam={isTeam}
           onClose={() => setStatusModalCustomer(null)}
           onConfirm={handleConfirmStatus}
+        />
+      )}
+
+      {pendingAssign && (
+        <AssignModal
+          customers={[pendingAssign.customer]}
+          teamMember={{ name: pendingAssign.user.name, email: pendingAssign.user.email }}
+          sending={assignSending}
+          error={assignError}
+          onConfirm={handleConfirmDirectAssign}
+          onCancel={() => {
+            if (!assignSending) { setPendingAssign(null); setAssignError(null); }
+          }}
         />
       )}
 
