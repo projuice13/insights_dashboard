@@ -15,6 +15,7 @@ interface Row {
 
 interface PlacedOrder {
   id: string;
+  type: string;
   businessName: string;
   contactName: string;
   address: string;
@@ -22,6 +23,7 @@ interface PlacedOrder {
   phone: string;
   openingTimes: string;
   deliveryInstructions: string;
+  enquiryText: string;
   placedAt: string;
   placedBy: { name: string };
   items: { id: string; product: string; quantity: number }[];
@@ -45,6 +47,7 @@ const labelClass = 'block text-xs font-medium text-[#6B7280] mb-1';
 // ── Form tab ─────────────────────────────────────────────────────────────────
 
 function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; products: string[] }) {
+  const [mode, setMode] = useState<'order' | 'enquiry'>('order');
   const [postcode, setPostcode] = useState('');
   const [address, setAddress] = useState('');
   const [businessName, setBusinessName] = useState('');
@@ -53,21 +56,26 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
   const [openingTimes, setOpeningTimes] = useState('');
   const [hasDeliveryInstructions, setHasDeliveryInstructions] = useState(false);
   const [deliveryInstructions, setDeliveryInstructions] = useState('');
+  const [enquiryText, setEnquiryText] = useState('');
   const [rows, setRows] = useState<Row[]>(() => makeRows(6));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const activeRows = rows.filter((r) => r.product.trim());
-  const allConfirmed = activeRows.length > 0 && activeRows.every((r) => r.confirmed);
-  const canSubmit =
-    allConfirmed &&
+  const customerFieldsFilled =
     businessName.trim() &&
     postcode.trim() &&
     address.trim() &&
     contactName.trim() &&
     phone.trim() &&
     openingTimes.trim();
+
+  const activeRows = rows.filter((r) => r.product.trim());
+  const allConfirmed = activeRows.length > 0 && activeRows.every((r) => r.confirmed);
+
+  const canSubmit = mode === 'enquiry'
+    ? !!(customerFieldsFilled && enquiryText.trim())
+    : !!(customerFieldsFilled && allConfirmed);
 
   const updateRow = (id: string, patch: Partial<Row>) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -91,9 +99,11 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          type: mode,
           postcode, address, businessName, contactName, phone, openingTimes,
           deliveryInstructions: hasDeliveryInstructions ? deliveryInstructions : '',
-          items: activeRows.map((r) => ({ product: r.product, quantity: r.quantity })),
+          enquiryText: mode === 'enquiry' ? enquiryText : '',
+          items: mode === 'order' ? activeRows.map((r) => ({ product: r.product, quantity: r.quantity })) : [],
         }),
       });
       if (!res.ok) {
@@ -105,6 +115,7 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
       setPostcode(''); setAddress(''); setBusinessName('');
       setContactName(''); setPhone(''); setOpeningTimes('');
       setHasDeliveryInstructions(false); setDeliveryInstructions('');
+      setEnquiryText('');
       setRows(makeRows(6));
       onSubmitted();
     } catch (err) {
@@ -122,13 +133,15 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
             <path d="M4 10l4 4 8-8" />
           </svg>
         </div>
-        <p className="text-lg font-semibold text-[#111827]">Order placed!</p>
+        <p className="text-lg font-semibold text-[#111827]">
+          {mode === 'enquiry' ? 'Enquiry submitted!' : 'Order placed!'}
+        </p>
         <p className="text-sm text-[#6B7280]">The team has been notified.</p>
         <button
           onClick={() => setSuccess(false)}
           className="cursor-pointer rounded-lg bg-[#111827] px-5 py-2 text-sm font-medium text-white hover:bg-[#374151]"
         >
-          Place another order
+          {mode === 'enquiry' ? 'Submit another enquiry' : 'Place another order'}
         </button>
       </div>
     );
@@ -141,6 +154,10 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
         <h2 className="mb-4 text-sm font-semibold text-[#111827]">Customer details</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
+            <label className={labelClass}>Customer postcode</label>
+            <input value={postcode} onChange={(e) => setPostcode(e.target.value)} className={inputClass} placeholder="SW1A 1AA" disabled={submitting} />
+          </div>
+          <div>
             <label className={labelClass}>Business name</label>
             <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} className={inputClass} placeholder="Acme Café" disabled={submitting} />
           </div>
@@ -151,10 +168,6 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
           <div>
             <label className={labelClass}>Customer address</label>
             <input value={address} onChange={(e) => setAddress(e.target.value)} className={inputClass} placeholder="123 High Street" disabled={submitting} />
-          </div>
-          <div>
-            <label className={labelClass}>Customer postcode</label>
-            <input value={postcode} onChange={(e) => setPostcode(e.target.value)} className={inputClass} placeholder="SW1A 1AA" disabled={submitting} />
           </div>
           <div>
             <label className={labelClass}>Phone number</label>
@@ -194,93 +207,139 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
         </div>
       </div>
 
-      {/* Order details table */}
+      {/* Order details / Enquiry */}
       <div className="rounded-xl border border-[#E5E7EB] bg-white">
-        <div className="border-b border-[#F3F4F6] px-6 py-4">
-          <h2 className="text-sm font-semibold text-[#111827]">Order details</h2>
+        <div className="flex items-center justify-between border-b border-[#F3F4F6] px-6 py-4">
+          <h2 className="text-sm font-semibold text-[#111827]">
+            {mode === 'enquiry' ? 'Enquiry details' : 'Order details'}
+          </h2>
+          {/* Mode toggle */}
+          <div className="flex rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] p-0.5">
+            <button
+              type="button"
+              onClick={() => setMode('order')}
+              disabled={submitting}
+              className={`cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                mode === 'order'
+                  ? 'bg-white text-[#111827] shadow-sm'
+                  : 'text-[#6B7280] hover:text-[#374151]'
+              }`}
+            >
+              Order
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('enquiry')}
+              disabled={submitting}
+              className={`cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                mode === 'enquiry'
+                  ? 'bg-white text-[#111827] shadow-sm'
+                  : 'text-[#6B7280] hover:text-[#374151]'
+              }`}
+            >
+              Enquiry only
+            </button>
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB]">
-                <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wide text-[#6B7280]">Product</th>
-                <th className="py-3 px-4 text-center text-xs font-medium uppercase tracking-wide text-[#6B7280] w-32">Quantity</th>
-                <th className="py-3 px-4 text-center text-xs font-medium uppercase tracking-wide text-[#6B7280] w-24">Confirm</th>
-                <th className="py-3 px-2 w-8" />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} className="border-b border-[#F3F4F6] last:border-b-0">
-                  {/* Product */}
-                  <td className="py-2 px-4">
-                    <ProductAutocomplete
-                      value={row.product}
-                      onChange={(v) => updateRow(row.id, { product: v, confirmed: false })}
-                      products={products}
-                      disabled={submitting}
-                    />
-                  </td>
-                  {/* Quantity */}
-                  <td className="py-2 px-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => updateRow(row.id, { quantity: Math.max(1, row.quantity - 1) })}
-                        disabled={submitting || row.quantity <= 1}
-                        className="cursor-pointer flex h-7 w-7 items-center justify-center rounded-md border border-[#E5E7EB] bg-white text-[#6B7280] transition-colors hover:border-[#9CA3AF] hover:text-[#374151] disabled:opacity-40"
-                      >
-                        <svg className="h-3 w-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth="2"><path d="M2 6h8" strokeLinecap="round"/></svg>
-                      </button>
-                      <span className="w-8 text-center text-sm font-medium text-[#111827]">{row.quantity}</span>
-                      <button
-                        type="button"
-                        onClick={() => updateRow(row.id, { quantity: row.quantity + 1 })}
-                        disabled={submitting}
-                        className="cursor-pointer flex h-7 w-7 items-center justify-center rounded-md border border-[#E5E7EB] bg-white text-[#6B7280] transition-colors hover:border-[#9CA3AF] hover:text-[#374151] disabled:opacity-40"
-                      >
-                        <svg className="h-3 w-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth="2"><path d="M6 2v8M2 6h8" strokeLinecap="round"/></svg>
-                      </button>
-                    </div>
-                  </td>
-                  {/* Confirm */}
-                  <td className="py-2 px-4 text-center">
-                    <input
-                      type="checkbox"
-                      checked={row.confirmed}
-                      disabled={submitting || !row.product.trim()}
-                      onChange={(e) => updateRow(row.id, { confirmed: e.target.checked })}
-                      className="h-4 w-4 cursor-pointer rounded border-[#D1D5DB] text-[#111827] focus:ring-0 disabled:cursor-default disabled:opacity-40"
-                    />
-                  </td>
-                  {/* Remove */}
-                  <td className="py-2 px-2">
-                    <button
-                      type="button"
-                      onClick={() => removeRow(row.id)}
-                      disabled={submitting || rows.length === 1}
-                      className="cursor-pointer text-[#D1D5DB] transition-colors hover:text-red-400 disabled:opacity-0"
-                      title="Remove row"
-                    >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 4h10M5.5 4V2.5h5V4M6.5 7v5M9.5 7v5M4 4l.75 9.5h6.5L12 4"/></svg>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="px-6 py-3 border-t border-[#F3F4F6]">
-          <button
-            type="button"
-            onClick={addRow}
-            disabled={submitting}
-            className="cursor-pointer inline-flex items-center gap-1.5 text-sm text-[#6B7280] transition-colors hover:text-[#374151]"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 3v10M3 8h10"/></svg>
-            Add row
-          </button>
-        </div>
+
+        {mode === 'enquiry' ? (
+          <div className="px-6 py-4">
+            <label className={labelClass}>Enquiry details</label>
+            <textarea
+              value={enquiryText}
+              onChange={(e) => setEnquiryText(e.target.value)}
+              disabled={submitting}
+              placeholder="Describe the enquiry…"
+              rows={6}
+              className="w-full resize-y rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm text-[#111827] outline-none transition-colors focus:border-[#6B7280] disabled:bg-[#F9FAFB]"
+            />
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB]">
+                    <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wide text-[#6B7280]">Product</th>
+                    <th className="py-3 px-4 text-center text-xs font-medium uppercase tracking-wide text-[#6B7280] w-32">Quantity</th>
+                    <th className="py-3 px-4 text-center text-xs font-medium uppercase tracking-wide text-[#6B7280] w-24">Confirm</th>
+                    <th className="py-3 px-2 w-8" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.id} className="border-b border-[#F3F4F6] last:border-b-0">
+                      {/* Product */}
+                      <td className="py-2 px-4">
+                        <ProductAutocomplete
+                          value={row.product}
+                          onChange={(v) => updateRow(row.id, { product: v, confirmed: false })}
+                          products={products}
+                          disabled={submitting}
+                        />
+                      </td>
+                      {/* Quantity */}
+                      <td className="py-2 px-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => updateRow(row.id, { quantity: Math.max(1, row.quantity - 1) })}
+                            disabled={submitting || row.quantity <= 1}
+                            className="cursor-pointer flex h-7 w-7 items-center justify-center rounded-md border border-[#E5E7EB] bg-white text-[#6B7280] transition-colors hover:border-[#9CA3AF] hover:text-[#374151] disabled:opacity-40"
+                          >
+                            <svg className="h-3 w-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth="2"><path d="M2 6h8" strokeLinecap="round"/></svg>
+                          </button>
+                          <span className="w-8 text-center text-sm font-medium text-[#111827]">{row.quantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => updateRow(row.id, { quantity: row.quantity + 1 })}
+                            disabled={submitting}
+                            className="cursor-pointer flex h-7 w-7 items-center justify-center rounded-md border border-[#E5E7EB] bg-white text-[#6B7280] transition-colors hover:border-[#9CA3AF] hover:text-[#374151] disabled:opacity-40"
+                          >
+                            <svg className="h-3 w-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth="2"><path d="M6 2v8M2 6h8" strokeLinecap="round"/></svg>
+                          </button>
+                        </div>
+                      </td>
+                      {/* Confirm */}
+                      <td className="py-2 px-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={row.confirmed}
+                          disabled={submitting || !row.product.trim()}
+                          onChange={(e) => updateRow(row.id, { confirmed: e.target.checked })}
+                          className="h-4 w-4 cursor-pointer rounded border-[#D1D5DB] text-[#111827] focus:ring-0 disabled:cursor-default disabled:opacity-40"
+                        />
+                      </td>
+                      {/* Remove */}
+                      <td className="py-2 px-2">
+                        <button
+                          type="button"
+                          onClick={() => removeRow(row.id)}
+                          disabled={submitting || rows.length === 1}
+                          className="cursor-pointer text-[#D1D5DB] transition-colors hover:text-red-400 disabled:opacity-0"
+                          title="Remove row"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 4h10M5.5 4V2.5h5V4M6.5 7v5M9.5 7v5M4 4l.75 9.5h6.5L12 4"/></svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-6 py-3 border-t border-[#F3F4F6]">
+              <button
+                type="button"
+                onClick={addRow}
+                disabled={submitting}
+                className="cursor-pointer inline-flex items-center gap-1.5 text-sm text-[#6B7280] transition-colors hover:text-[#374151]"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 3v10M3 8h10"/></svg>
+                Add row
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {error && (
@@ -290,11 +349,13 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
       {/* Submit */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-[#9CA3AF]">
-          {!businessName.trim() || !postcode.trim() || !address.trim() || !contactName.trim() || !phone.trim() || !openingTimes.trim()
+          {!customerFieldsFilled
             ? 'All customer details fields are required.'
-            : activeRows.length === 0
+            : mode === 'enquiry' && !enquiryText.trim()
+            ? 'Enter the enquiry details before submitting.'
+            : mode === 'order' && activeRows.length === 0
             ? 'Add at least one product to place an order.'
-            : !allConfirmed
+            : mode === 'order' && !allConfirmed
             ? 'Check the Confirm box for each product before placing.'
             : ''}
         </p>
@@ -309,7 +370,9 @@ function OrderForm({ onSubmitted, products }: { onSubmitted: () => void; product
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
             </svg>
           )}
-          {submitting ? 'Placing order…' : 'Place order'}
+          {submitting
+            ? (mode === 'enquiry' ? 'Submitting…' : 'Placing order…')
+            : (mode === 'enquiry' ? 'Submit enquiry' : 'Place order')}
         </button>
       </div>
     </div>
@@ -347,12 +410,13 @@ function OrderHistory({ refreshKey }: { refreshKey: number }) {
   }
 
   if (orders.length === 0) {
-    return <p className="py-16 text-center text-sm text-[#9CA3AF]">No orders placed yet.</p>;
+    return <p className="py-16 text-center text-sm text-[#9CA3AF]">No history yet.</p>;
   }
 
   return (
     <div className="space-y-3">
       {orders.map((order) => {
+        const isEnquiry = order.type === 'enquiry';
         const isOpen = expanded === order.id;
         const date = new Date(order.placedAt).toLocaleDateString('en-GB', {
           day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -363,10 +427,18 @@ function OrderHistory({ refreshKey }: { refreshKey: number }) {
               onClick={() => setExpanded(isOpen ? null : order.id)}
               className="flex w-full cursor-pointer items-center justify-between px-5 py-4 text-left hover:bg-[#F9FAFB] transition-colors rounded-xl"
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                {isEnquiry && (
+                  <span className="shrink-0 rounded-full bg-[#F3F4F6] px-2 py-0.5 text-xs font-medium text-[#6B7280]">
+                    Enquiry
+                  </span>
+                )}
                 <div>
                   <p className="text-sm font-semibold text-[#111827]">{order.businessName}</p>
-                  <p className="text-xs text-[#9CA3AF]">{order.contactName} · {order.postcode} · {order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
+                  <p className="text-xs text-[#9CA3AF]">
+                    {order.contactName} · {order.postcode}
+                    {!isEnquiry && ` · ${order.items.length} item${order.items.length !== 1 ? 's' : ''}`}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -392,7 +464,7 @@ function OrderHistory({ refreshKey }: { refreshKey: number }) {
                     ['Postcode', order.postcode],
                     ['Phone', order.phone],
                     ['Opening times', order.openingTimes],
-                  ...(order.deliveryInstructions ? [['Delivery instructions', order.deliveryInstructions]] : []),
+                    ...(order.deliveryInstructions ? [['Delivery instructions', order.deliveryInstructions]] : []),
                   ].map(([label, value]) => (
                     <div key={label}>
                       <span className="text-[#9CA3AF]">{label}: </span>
@@ -400,23 +472,30 @@ function OrderHistory({ refreshKey }: { refreshKey: number }) {
                     </div>
                   ))}
                 </div>
-                {/* Items */}
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b border-[#E5E7EB]">
-                      <th className="py-2 text-left text-xs font-medium text-[#6B7280]">Product</th>
-                      <th className="py-2 text-right text-xs font-medium text-[#6B7280]">Qty</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {order.items.map((item) => (
-                      <tr key={item.id} className="border-b border-[#F3F4F6] last:border-b-0">
-                        <td className="py-1.5 text-[#374151]">{item.product}</td>
-                        <td className="py-1.5 text-right font-medium text-[#111827]">{item.quantity}</td>
+
+                {/* Enquiry text or items */}
+                {isEnquiry ? (
+                  <div className="rounded-lg bg-[#F9FAFB] px-4 py-3 text-sm text-[#374151] whitespace-pre-wrap">
+                    {order.enquiryText}
+                  </div>
+                ) : (
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b border-[#E5E7EB]">
+                        <th className="py-2 text-left text-xs font-medium text-[#6B7280]">Product</th>
+                        <th className="py-2 text-right text-xs font-medium text-[#6B7280]">Qty</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {order.items.map((item) => (
+                        <tr key={item.id} className="border-b border-[#F3F4F6] last:border-b-0">
+                          <td className="py-1.5 text-[#374151]">{item.product}</td>
+                          <td className="py-1.5 text-right font-medium text-[#111827]">{item.quantity}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             )}
           </div>
@@ -475,7 +554,7 @@ export default function CreateOrderClient() {
                   : 'border-transparent text-[#9CA3AF] hover:text-[#6B7280]'
               }`}
             >
-              {t === 'form' ? 'New Order' : 'Order History'}
+              {t === 'form' ? 'New Order' : 'History'}
             </button>
           ))}
         </div>

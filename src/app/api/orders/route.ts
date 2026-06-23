@@ -9,6 +9,7 @@ interface OrderItem {
 }
 
 interface OrderBody {
+  type?: 'order' | 'enquiry';
   postcode: string;
   address: string;
   businessName: string;
@@ -16,6 +17,7 @@ interface OrderBody {
   phone: string;
   openingTimes: string;
   deliveryInstructions?: string;
+  enquiryText?: string;
   items: OrderItem[];
 }
 
@@ -25,18 +27,14 @@ function buildEmailText(order: OrderBody, placedBy: string): string {
     hour: '2-digit', minute: '2-digit',
   });
 
-  const itemLines = order.items
-    .map((i) => `  ${i.product.padEnd(40)} x${i.quantity}`)
-    .join('\n');
+  const isEnquiry = order.type === 'enquiry';
 
-  return [
-    `New order placed via the Projuice portal`,
-    ``,
+  const customerLines = [
     `CUSTOMER DETAILS`,
     `─────────────────────────────────────`,
     `Business name:   ${order.businessName}`,
-    `Address:         ${order.address}`,
     `Postcode:        ${order.postcode}`,
+    `Address:         ${order.address}`,
     `Contact name:    ${order.contactName}`,
     `Phone:           ${order.phone}`,
     `Opening times:   ${order.openingTimes}`,
@@ -46,10 +44,28 @@ function buildEmailText(order: OrderBody, placedBy: string): string {
       `─────────────────────────────────────`,
       order.deliveryInstructions,
     ] : []),
+  ];
+
+  const detailLines = isEnquiry
+    ? [
+        `ENQUIRY`,
+        `─────────────────────────────────────`,
+        order.enquiryText ?? '',
+      ]
+    : [
+        `ORDER DETAILS`,
+        `─────────────────────────────────────`,
+        ...order.items.map((i) => `  ${i.product.padEnd(40)} x${i.quantity}`),
+      ];
+
+  return [
+    isEnquiry
+      ? `New enquiry submitted via the Projuice portal`
+      : `New order placed via the Projuice portal`,
     ``,
-    `ORDER DETAILS`,
-    `─────────────────────────────────────`,
-    itemLines,
+    ...customerLines,
+    ``,
+    ...detailLines,
     ``,
     `Placed by: ${placedBy}`,
     `Date/time: ${date}`,
@@ -59,10 +75,12 @@ function buildEmailText(order: OrderBody, placedBy: string): string {
 export async function POST(req: NextRequest) {
   const session = await verifySession();
   const body = (await req.json()) as OrderBody;
+  const isEnquiry = body.type === 'enquiry';
 
   // Save to DB
   const order = await prisma.order.create({
     data: {
+      type: body.type ?? 'order',
       postcode: body.postcode,
       address: body.address,
       businessName: body.businessName,
@@ -70,13 +88,16 @@ export async function POST(req: NextRequest) {
       phone: body.phone,
       openingTimes: body.openingTimes,
       deliveryInstructions: body.deliveryInstructions ?? '',
+      enquiryText: body.enquiryText ?? '',
       placedById: session.userId,
-      items: {
-        create: body.items.map((i) => ({
-          product: i.product,
-          quantity: i.quantity,
-        })),
-      },
+      ...(isEnquiry ? {} : {
+        items: {
+          create: body.items.map((i) => ({
+            product: i.product,
+            quantity: i.quantity,
+          })),
+        },
+      }),
     },
   });
 
@@ -98,7 +119,9 @@ export async function POST(req: NextRequest) {
       await transporter.sendMail({
         from: `"${SMTP_FROM_NAME ?? 'Projuice Portal'}" <${SMTP_FROM_EMAIL ?? SMTP_USER}>`,
         to: recipients.join(', '),
-        subject: `New Order — ${body.businessName}`,
+        subject: isEnquiry
+          ? `New Enquiry — ${body.businessName}`
+          : `New Order — ${body.businessName}`,
         text: buildEmailText(body, session.name),
       });
     } catch (err) {

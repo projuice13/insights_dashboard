@@ -79,6 +79,7 @@ model Assignment {
 
 model Order {
   id           String      @id @default(cuid())
+  type         String      @default("order")
   postcode     String
   address      String
   businessName String
@@ -86,6 +87,7 @@ model Order {
   phone        String
   openingTimes         String
   deliveryInstructions String  @default("")
+  enquiryText          String  @default("")
   items                OrderItem[]
   placedAt     DateTime    @default(now())
   placedById   String
