@@ -57,7 +57,7 @@ export default async function HomePage() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[#111827]">Customer Insights Dashboard</p>
+                  <p className="text-sm font-semibold text-[#111827]">PJ Intranet</p>
                   <p className="mt-0.5 text-xs text-[#9CA3AF]">View churn risk, manage contacts and track customer status</p>
                 </div>
               </div>
