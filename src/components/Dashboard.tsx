@@ -372,7 +372,7 @@ export default function Dashboard({
               Home
             </Link>
             <h1 className="text-lg font-semibold text-[#111827] tracking-tight">
-              PJ Intranet
+              Customer Insights Dashboard
             </h1>
           </div>
           <div className="flex items-center gap-2">
