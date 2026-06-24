@@ -140,7 +140,7 @@ export default async function HomePage() {
 
             {/* Resources Portal */}
             <a
-              href="https://resources.projuice.co.uk/"
+              href="https://resources.projuice.com/"
               target="_blank"
               rel="noopener noreferrer"
               className="flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-6 py-5 shadow-sm transition-all hover:border-[#9CA3AF] hover:shadow-md"
