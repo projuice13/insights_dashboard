@@ -92,7 +92,7 @@ export default async function HomePage() {
 
             {/* Delivery Portal */}
             <a
-              href="https://pro-juice.co.uk/"
+              href="https://deliveries.projuice.com/"
               target="_blank"
               rel="noopener noreferrer"
               className="flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-6 py-5 shadow-sm transition-all hover:border-[#9CA3AF] hover:shadow-md"
