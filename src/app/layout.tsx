@@ -7,6 +7,7 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'PJ Intranet',
   description: 'Monitor customer ordering patterns and identify churn risk',
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({
