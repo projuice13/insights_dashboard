@@ -12,6 +12,7 @@ interface SelectionActionBarProps {
   users: AdminUser[];
   onClear: () => void;
   onAssign: (ids: string[], user: AdminUser | null) => void;
+  onMerge?: (customers: Customer[]) => void;
 }
 
 export default function SelectionActionBar({
@@ -21,6 +22,7 @@ export default function SelectionActionBar({
   users,
   onClear,
   onAssign,
+  onMerge,
 }: SelectionActionBarProps) {
   const [pendingUser, setPendingUser] = useState<AdminUser | null>(null);
   const [sending, setSending] = useState(false);
@@ -137,6 +139,18 @@ export default function SelectionActionBar({
                 className="cursor-pointer rounded-lg border border-[#E5E7EB] px-4 py-1.5 text-sm font-medium text-red-600 transition-colors hover:border-red-200 hover:bg-red-50"
               >
                 Unassign
+              </button>
+            </>
+          )}
+
+          {onMerge && selectedCustomers.length >= 2 && (
+            <>
+              <div className="h-4 w-px bg-[#E5E7EB]" />
+              <button
+                onClick={() => onMerge(selectedCustomers)}
+                className="cursor-pointer rounded-lg border border-[#E5E7EB] px-4 py-1.5 text-sm font-medium text-[#374151] transition-colors hover:border-[#9CA3AF] hover:bg-[#F9FAFB]"
+              >
+                Merge
               </button>
             </>
           )}

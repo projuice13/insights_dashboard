@@ -21,6 +21,7 @@ model User {
   statusesSet       CustomerStatus[] @relation("StatusSetter")
   statusesApproved  CustomerStatus[] @relation("StatusApprover")
   notifications     Notification[]
+  customerMerges    CustomerMerge[]
 }
 
 model CustomerStatus {
@@ -101,6 +102,19 @@ model OrderItem {
   quantity Int
   order    Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
   @@index([orderId])
+}
+
+model CustomerMerge {
+  id                String   @id @default(cuid())
+  sourceId          String   @unique
+  canonicalId       String
+  canonicalName     String
+  canonicalPostcode String
+  mergedAt          DateTime @default(now())
+  mergedById        String
+  mergedBy          User     @relation(fields: [mergedById], references: [id])
+
+  @@index([canonicalId])
 }
 
 model Comment {

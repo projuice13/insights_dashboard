@@ -25,6 +25,7 @@ import SettingsMenu from './SettingsMenu';
 import NotificationsMenu from './NotificationsMenu';
 import StatusModal from './StatusModal';
 import AssignModal from './AssignModal';
+import MergeModal from './MergeModal';
 
 interface DashboardProps {
   customers: Customer[];
@@ -38,6 +39,7 @@ interface DashboardProps {
   importStats?: { imported: number; skipped: number } | null;
   myAssignedIds?: string[]; // team users only — the IDs assigned to them
   onAssign?: (ids: string[], user: AdminUser | null) => void;
+  onMerge?: (canonical: Customer, sources: Customer[]) => Promise<void>;
   onImport?: (file: File) => void;
   onReset?: () => void;
 }
@@ -53,6 +55,7 @@ export default function Dashboard({
   importStats,
   myAssignedIds,
   onAssign,
+  onMerge,
   onImport,
   onReset,
 }: DashboardProps) {
@@ -80,6 +83,9 @@ export default function Dashboard({
   const [pendingAssign, setPendingAssign] = useState<{ customer: Customer; user: AdminUser } | null>(null);
   const [assignSending, setAssignSending] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
+  const [mergeCustomers, setMergeCustomers] = useState<Customer[] | null>(null);
+  const [mergeSending, setMergeSending] = useState(false);
+  const [mergeError, setMergeError] = useState<string | null>(null);
   // Local copy of statuses so we can update the badge instantly (optimistic),
   // then let router.refresh() sync the server data in the background.
   const [localStatuses, setLocalStatuses] = useState<CustomerStatuses>(customerStatuses);
@@ -292,6 +298,21 @@ export default function Dashboard({
     }
   };
 
+  const handleConfirmMerge = async (canonical: Customer, sources: Customer[]) => {
+    if (!onMerge) return;
+    setMergeSending(true);
+    setMergeError(null);
+    try {
+      await onMerge(canonical, sources);
+      setMergeCustomers(null);
+      resetSelection();
+    } catch (err) {
+      setMergeError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setMergeSending(false);
+    }
+  };
+
   const handleCommentAdded = useCallback((customerId: string) => {
     setCustomersWithComments((prev) => new Set([...prev, customerId]));
   }, []);
@@ -412,6 +433,7 @@ export default function Dashboard({
             users={users}
             onClear={resetSelection}
             onAssign={onAssign}
+            onMerge={onMerge ? setMergeCustomers : undefined}
           />
         )}
 
@@ -531,6 +553,18 @@ export default function Dashboard({
           onConfirm={handleConfirmDirectAssign}
           onCancel={() => {
             if (!assignSending) { setPendingAssign(null); setAssignError(null); }
+          }}
+        />
+      )}
+
+      {mergeCustomers && (
+        <MergeModal
+          customers={mergeCustomers}
+          merging={mergeSending}
+          error={mergeError}
+          onConfirm={handleConfirmMerge}
+          onCancel={() => {
+            if (!mergeSending) { setMergeCustomers(null); setMergeError(null); }
           }}
         />
       )}

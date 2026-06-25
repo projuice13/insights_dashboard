@@ -7,7 +7,10 @@ import AdminDashboardClient from '@/components/AdminDashboardClient';
 export default async function AdminPage() {
   const session = await requireAdmin();
 
-  const rows = await prisma.rawOrderRow.findMany();
+  const [rows, mergeRows] = await Promise.all([
+    prisma.rawOrderRow.findMany(),
+    prisma.customerMerge.findMany(),
+  ]);
   const rawOrders: RawOrder[] = rows.map((r) => ({
     sales_order_number: r.salesOrderNumber,
     customer_name: r.customerName,
@@ -18,7 +21,12 @@ export default async function AdminPage() {
     order_value: r.orderValue,
     order_date: r.orderDate,
   }));
-  const customers = rawOrders.length > 0 ? buildCustomers(rawOrders) : null;
+  const merges = mergeRows.map((m) => ({
+    sourceId: m.sourceId,
+    canonicalName: m.canonicalName,
+    canonicalPostcode: m.canonicalPostcode,
+  }));
+  const customers = rawOrders.length > 0 ? buildCustomers(rawOrders, merges) : null;
 
   const assignmentRows = await prisma.assignment.findMany({ include: { user: true } });
   const assignments: Record<string, string> = {};

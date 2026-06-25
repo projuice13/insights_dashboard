@@ -16,7 +16,10 @@ export default async function MyContactsPage() {
 
   if (session.role === 'admin') redirect('/');
 
-  const rows = await prisma.rawOrderRow.findMany();
+  const [rows, mergeRows] = await Promise.all([
+    prisma.rawOrderRow.findMany(),
+    prisma.customerMerge.findMany(),
+  ]);
   const rawOrders: RawOrder[] = rows.map((r) => ({
     sales_order_number: r.salesOrderNumber,
     customer_name: r.customerName,
@@ -27,7 +30,12 @@ export default async function MyContactsPage() {
     order_value: r.orderValue,
     order_date: r.orderDate,
   }));
-  const allCustomers = rawOrders.length > 0 ? buildCustomers(rawOrders) : [];
+  const merges = mergeRows.map((m) => ({
+    sourceId: m.sourceId,
+    canonicalName: m.canonicalName,
+    canonicalPostcode: m.canonicalPostcode,
+  }));
+  const allCustomers = rawOrders.length > 0 ? buildCustomers(rawOrders, merges) : [];
 
   const allAssignmentRows = await prisma.assignment.findMany({
     include: { user: { select: { name: true } } },

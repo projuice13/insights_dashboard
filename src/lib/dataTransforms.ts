@@ -89,8 +89,26 @@ export function formatRegion(name: string): string {
     .join(' ');
 }
 
-export function buildCustomers(rawOrders: RawOrder[], today: Date = new Date()): Customer[] {
-  const merged = matchAndMergeCustomers(rawOrders);
+export interface MergeMapping {
+  sourceId: string;
+  canonicalName: string;
+  canonicalPostcode: string;
+}
+
+export function buildCustomers(
+  rawOrders: RawOrder[],
+  merges: MergeMapping[] = [],
+  today: Date = new Date(),
+): Customer[] {
+  // Remap rows whose natural ID has been merged into another customer
+  const mergeMap = new Map(merges.map((m) => [m.sourceId, { name: m.canonicalName, postcode: m.canonicalPostcode }]));
+  const remapped = mergeMap.size === 0 ? rawOrders : rawOrders.map((row) => {
+    const rowId = makeId(row.customer_name, row.postcode);
+    const canonical = mergeMap.get(rowId);
+    return canonical ? { ...row, customer_name: canonical.name, postcode: canonical.postcode } : row;
+  });
+
+  const merged = matchAndMergeCustomers(remapped);
 
   return merged.map((m) => {
     const orders: Order[] = m.orders.map((o) => ({

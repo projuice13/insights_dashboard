@@ -146,6 +146,22 @@ export default function AdminDashboardClient({
     [customers],
   );
 
+  const handleMerge = useCallback(async (canonical: Customer, sources: Customer[]) => {
+    const res = await fetch('/api/admin/merge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        canonical: { id: canonical.id, name: canonical.name, postcode: canonical.postcode },
+        sourceIds: sources.map((s) => s.id),
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error ?? 'Failed to merge customers.');
+    }
+    router.refresh();
+  }, [router]);
+
   const handleReset = useCallback(async () => {
     await fetch('/api/admin/upload-csv', { method: 'DELETE' });
     setCustomers(null);
@@ -191,6 +207,7 @@ export default function AdminDashboardClient({
         notifications={notifications}
         importStats={importStats}
         onAssign={handleAssign}
+        onMerge={handleMerge}
         onImport={handleUpload}
         onReset={handleReset}
       />
