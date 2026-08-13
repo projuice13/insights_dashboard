@@ -431,6 +431,7 @@ export default function Dashboard({
             customers={searched}
             assignments={assignments}
             users={users}
+            statuses={localStatuses}
             onClear={resetSelection}
             onAssign={onAssign}
             onMerge={onMerge ? setMergeCustomers : undefined}

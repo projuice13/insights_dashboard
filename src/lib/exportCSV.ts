@@ -1,4 +1,4 @@
-import { Customer } from './types';
+import { Customer, CustomerStatuses } from './types';
 
 function formatDate(d: Date): string {
   return d.toISOString().split('T')[0];
@@ -12,6 +12,7 @@ export function exportCustomersCSV(
   customers: Customer[],
   latestNotes: Record<string, { text: string; createdAt: string; userName: string }> = {},
   assignments: Record<string, string> = {},
+  statuses: CustomerStatuses = {},
 ) {
   const headers = [
     'customer_name',
@@ -24,6 +25,8 @@ export function exportCustomersCSV(
     'risk_score',
     'risk_level',
     'assigned_to',
+    'status',
+    'status_note',
     'latest_note',
     'latest_note_by',
     'latest_note_date',
@@ -31,6 +34,7 @@ export function exportCustomersCSV(
 
   const rows = customers.map((c) => {
     const note = latestNotes[c.id];
+    const status = statuses[c.id];
     return [
       esc(c.name),
       esc(c.email),
@@ -42,6 +46,8 @@ export function exportCustomersCSV(
       c.gapRatio.toFixed(1),
       c.riskLevel,
       assignments[c.id] ? esc(assignments[c.id]) : '""',
+      status ? esc(status.status) : '""',
+      status?.reason ? esc(status.reason) : '""',
       note ? esc(note.text) : '""',
       note ? esc(note.userName) : '""',
       note ? note.createdAt.split('T')[0] : '""',

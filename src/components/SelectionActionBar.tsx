@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Customer, Assignments, AdminUser } from '@/lib/types';
+import { Customer, Assignments, AdminUser, CustomerStatuses } from '@/lib/types';
 import { exportCustomersCSV } from '@/lib/exportCSV';
 import AssignModal from './AssignModal';
 
@@ -10,6 +10,7 @@ interface SelectionActionBarProps {
   customers: Customer[];
   assignments: Assignments;
   users: AdminUser[];
+  statuses: CustomerStatuses;
   onClear: () => void;
   onAssign: (ids: string[], user: AdminUser | null) => void;
   onMerge?: (customers: Customer[]) => void;
@@ -20,6 +21,7 @@ export default function SelectionActionBar({
   customers,
   assignments,
   users,
+  statuses,
   onClear,
   onAssign,
   onMerge,
@@ -45,9 +47,9 @@ export default function SelectionActionBar({
         body: JSON.stringify({ customerIds: selectedCustomers.map((c) => c.id) }),
       });
       const latestNotes = res.ok ? await res.json() : {};
-      exportCustomersCSV(selectedCustomers, latestNotes, assignments);
+      exportCustomersCSV(selectedCustomers, latestNotes, assignments, statuses);
     } catch {
-      exportCustomersCSV(selectedCustomers, {}, assignments);
+      exportCustomersCSV(selectedCustomers, {}, assignments, statuses);
     } finally {
       setDownloading(false);
     }
