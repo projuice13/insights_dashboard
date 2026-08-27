@@ -60,45 +60,76 @@ export async function POST(
   const trimmedReason = reason?.trim() || null;
   const needsApproval = !isAdmin && isDeactivation;
 
-  await prisma.customerStatus.upsert({
-    where: { customerId },
-    create: {
-      customerId,
-      customerName,
-      status,
-      approvalStatus: needsApproval ? 'pending' : 'approved',
-      reason: trimmedReason,
-      setById: session.userId,
-      setAt: now,
-      approvedById: needsApproval ? null : session.userId,
-      approvedAt: needsApproval ? null : now,
-    },
-    update: {
-      status,
-      approvalStatus: needsApproval ? 'pending' : 'approved',
-      reason: trimmedReason,
-      setById: session.userId,
-      setAt: now,
-      approvedById: needsApproval ? null : session.userId,
-      approvedAt: needsApproval ? null : now,
-    },
-  });
-
-  // Send notifications only when a team member requests deactivation
-  if (needsApproval) {
-    const admins = await prisma.user.findMany({
-      where: { role: 'admin' },
-      select: { id: true },
-    });
-    await prisma.notification.createMany({
-      data: admins.map((a) => ({
-        userId: a.id,
-        type: 'deactivation_request',
+  try {
+    await prisma.customerStatus.upsert({
+      where: { customerId },
+      create: {
         customerId,
         customerName,
-        message: `${session.name} wants to deactivate ${customerName} — ${trimmedReason ?? 'no reason given'}`,
-      })),
+        status,
+        approvalStatus: needsApproval ? 'pending' : 'approved',
+        reason: trimmedReason,
+        setById: session.userId,
+        setAt: now,
+        approvedById: needsApproval ? null : session.userId,
+        approvedAt: needsApproval ? null : now,
+      },
+      update: {
+        status,
+        approvalStatus: needsApproval ? 'pending' : 'approved',
+        reason: trimmedReason,
+        setById: session.userId,
+        setAt: now,
+        approvedById: needsApproval ? null : session.userId,
+        approvedAt: needsApproval ? null : now,
+      },
     });
+
+    // Send notifications only when a team member requests deactivation
+    if (needsApproval) {
+      const admins = await prisma.user.findMany({
+        where: { role: 'admin' },
+        select: { id: true },
+      });
+      await prisma.notification.createMany({
+        data: admins.map((a) => ({
+          userId: a.id,
+          type: 'deactivation_request',
+          customerId,
+          customerName,
+          message: `${session.name} wants to deactivate ${customerName} — ${trimmedReason ?? 'no reason given'}`,
+        })),
+      });
+    }
+  } catch (err) {
+    const code = err && typeof err === 'object' && 'code' in err ? (err as { code: string }).code : null;
+
+    // Foreign-key violation on setById/approvedById: the logged-in user's record
+    // no longer exists (e.g. their account was removed and re-created), but their
+    // session cookie is still valid. Ask them to sign in again.
+    if (code === 'P2003') {
+      return NextResponse.json(
+        { error: 'Your session is out of date. Please log out and log back in, then try again.' },
+        { status: 401 },
+      );
+    }
+
+    // Unique-constraint race: a concurrent request (double-click, or two people on
+    // the same customer) already wrote the status. The end state is correct, so
+    // treat it as success.
+    if (code === 'P2002') {
+      return NextResponse.json({
+        ok: true,
+        approvalStatus: needsApproval ? 'pending' : 'approved',
+      });
+    }
+
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[status] update failed:', message);
+    return NextResponse.json(
+      { error: 'Could not save the status change. Please try again.' },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({
