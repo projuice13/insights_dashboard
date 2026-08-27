@@ -341,6 +341,12 @@ export default function Dashboard({
           body: JSON.stringify({ status, reason, customerName: statusModalCustomer.name }),
         });
       }
+      // Session expired or no longer valid → send them to log in again
+      // rather than surfacing a raw "Forbidden".
+      if (res.status === 401 || res.status === 403) {
+        window.location.href = '/login';
+        return;
+      }
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? 'Failed to update status.');
