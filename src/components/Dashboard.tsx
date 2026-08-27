@@ -330,11 +330,12 @@ export default function Dashboard({
     async (status: CustomerStatusType | null, reason: string) => {
       if (!statusModalCustomer) return;
 
+      const encodedId = encodeURIComponent(statusModalCustomer.id);
       let res: Response;
       if (status === null) {
-        res = await fetch(`/api/customers/${statusModalCustomer.id}/status`, { method: 'DELETE' });
+        res = await fetch(`/api/customers/${encodedId}/status`, { method: 'DELETE' });
       } else {
-        res = await fetch(`/api/customers/${statusModalCustomer.id}/status`, {
+        res = await fetch(`/api/customers/${encodedId}/status`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status, reason, customerName: statusModalCustomer.name }),
