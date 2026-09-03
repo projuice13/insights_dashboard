@@ -60,6 +60,9 @@ export default async function MyContactsPage() {
   });
   const customersWithComments = commentedCustomerIds.map((c) => c.customerId);
 
+  const churnRows = await prisma.churnEmailContact.findMany({ select: { customerId: true } });
+  const churnEmailIds = churnRows.map((r) => r.customerId);
+
   const statusRows = await prisma.customerStatus.findMany({
     include: {
       setBy: { select: { name: true } },
@@ -107,6 +110,7 @@ export default async function MyContactsPage() {
       currentUser={{ id: session.userId, name: session.name }}
       myAssignedIds={myAssignedIds}
       customerStatuses={customerStatuses}
+      churnEmailIds={churnEmailIds}
       notifications={notifications}
     />
   );

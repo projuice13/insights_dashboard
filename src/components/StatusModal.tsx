@@ -6,10 +6,11 @@ import { CustomerStatusType, STATUS_CONFIG } from '@/lib/types';
 interface Props {
   customerName: string;
   currentStatus: CustomerStatusType | null; // null = currently 'No Status'
+  currentChurnEmail: boolean;
   isTeam: boolean;
   onClose: () => void;
-  // status === null means clear to Active
-  onConfirm: (status: CustomerStatusType | null, reason: string) => Promise<void>;
+  // status === null means clear to No Status
+  onConfirm: (status: CustomerStatusType | null, reason: string, addToChurnEmail: boolean) => Promise<void>;
 }
 
 const STATUS_ORDER: CustomerStatusType[] = [
@@ -19,12 +20,14 @@ const STATUS_ORDER: CustomerStatusType[] = [
 export default function StatusModal({
   customerName,
   currentStatus,
+  currentChurnEmail,
   isTeam,
   onClose,
   onConfirm,
 }: Props) {
   const [selected, setSelected] = useState<CustomerStatusType | null>(currentStatus);
   const [reason, setReason] = useState('');
+  const [churnEmail, setChurnEmail] = useState(currentChurnEmail);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +42,7 @@ export default function StatusModal({
   const isClosure = selected === 'closed';
   const reasonRequired = isClosure;
   const reasonLabel = reasonRequired ? 'Reason (required)' : 'Reason (optional)';
-  const noChange = selected === currentStatus;
+  const noChange = selected === currentStatus && churnEmail === currentChurnEmail;
 
   const handleSubmit = async () => {
     if (noChange) {
@@ -54,7 +57,7 @@ export default function StatusModal({
     setError(null);
     setSubmitting(true);
     try {
-      await onConfirm(selected, reason.trim());
+      await onConfirm(selected, reason.trim(), churnEmail);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
       setSubmitting(false);
@@ -120,6 +123,18 @@ export default function StatusModal({
             </div>
           </div>
 
+          {/* Churn email list toggle */}
+          <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-[#E5E7EB] px-3 py-2.5">
+            <input
+              type="checkbox"
+              checked={churnEmail}
+              onChange={(e) => setChurnEmail(e.target.checked)}
+              disabled={submitting}
+              className="h-4 w-4 rounded border-[#D1D5DB] text-[#111827] focus:ring-0 cursor-pointer"
+            />
+            <span className="text-sm text-[#374151]">Add to churn email list</span>
+          </label>
+
           {/* Approval notice for team users picking Closed */}
           {isTeam && isClosure && (
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -159,7 +174,7 @@ export default function StatusModal({
                 setError(null);
                 setSubmitting(true);
                 try {
-                  await onConfirm(null, '');
+                  await onConfirm(null, '', churnEmail);
                 } catch (err) {
                   setError(err instanceof Error ? err.message : 'Something went wrong.');
                   setSubmitting(false);

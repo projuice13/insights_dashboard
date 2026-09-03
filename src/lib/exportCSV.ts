@@ -13,6 +13,7 @@ export function exportCustomersCSV(
   latestNotes: Record<string, { text: string; createdAt: string; userName: string }> = {},
   assignments: Record<string, string> = {},
   statuses: CustomerStatuses = {},
+  churnEmailIds: Set<string> = new Set(),
 ) {
   const headers = [
     'customer_name',
@@ -27,6 +28,7 @@ export function exportCustomersCSV(
     'assigned_to',
     'status',
     'status_note',
+    'churn_email_list',
     'latest_note',
     'latest_note_by',
     'latest_note_date',
@@ -48,6 +50,7 @@ export function exportCustomersCSV(
       assignments[c.id] ? esc(assignments[c.id]) : '""',
       status ? esc(status.status) : '""',
       status?.reason ? esc(status.reason) : '""',
+      churnEmailIds.has(c.id) ? 'Yes' : '""',
       note ? esc(note.text) : '""',
       note ? esc(note.userName) : '""',
       note ? note.createdAt.split('T')[0] : '""',

@@ -34,6 +34,7 @@ interface DashboardProps {
   currentUser: { id: string; name: string };
   initialCustomersWithComments: string[];
   customerStatuses: CustomerStatuses;
+  churnEmailIds: string[];
   notifications: AppNotification[];
   // Admin-only — omit these for team users
   importStats?: { imported: number; skipped: number } | null;
@@ -51,6 +52,7 @@ export default function Dashboard({
   currentUser,
   initialCustomersWithComments,
   customerStatuses,
+  churnEmailIds,
   notifications,
   importStats,
   myAssignedIds,
@@ -90,6 +92,10 @@ export default function Dashboard({
   // then let router.refresh() sync the server data in the background.
   const [localStatuses, setLocalStatuses] = useState<CustomerStatuses>(customerStatuses);
   useEffect(() => { setLocalStatuses(customerStatuses); }, [customerStatuses]);
+  // Churn email list membership (customerId set), kept locally for optimistic updates.
+  const [localChurnIds, setLocalChurnIds] = useState<Set<string>>(() => new Set(churnEmailIds));
+  useEffect(() => { setLocalChurnIds(new Set(churnEmailIds)); }, [churnEmailIds]);
+  const [churnEmailOnly, setChurnEmailOnly] = useState(false);
 
   // Helper: default state of the status filter (used to detect "deviation from default")
   const DEFAULT_STATUS_FILTER: ReadonlySet<StatusFilterValue> = new Set<StatusFilterValue>([
@@ -125,8 +131,9 @@ export default function Dashboard({
     if (!isTeam && assignedToFilter !== 'all') count++;
     if (isTeam && !assignedToMe) count++;
     if (!isTeam && !statusFilterIsDefault) count++;
+    if (churnEmailOnly) count++;
     return count;
-  }, [customerType, region, lastOrdered, spend, riskLevels, assignedToFilter, assignedToMe, isTeam, statusFilterIsDefault]);
+  }, [customerType, region, lastOrdered, spend, riskLevels, assignedToFilter, assignedToMe, isTeam, statusFilterIsDefault, churnEmailOnly]);
 
   const handleClearAllFilters = useCallback(() => {
     setCustomerType('standard');
@@ -137,6 +144,7 @@ export default function Dashboard({
     setAssignedToFilter('all');
     setAssignedToMe(true);
     setStatusFilter(new Set(['active', 'ordered', 'awaiting_order', 'pending', 'dormant', 'lost']));
+    setChurnEmailOnly(false);
     resetSelection();
   }, []);
 
@@ -194,11 +202,13 @@ export default function Dashboard({
 
       if (riskLevels.size > 0 && !riskLevels.has(c.riskLevel)) return false;
 
+      if (churnEmailOnly && !localChurnIds.has(c.id)) return false;
+
       return true;
     });
   }, [customers, customerType, region, lastOrdered, spend, riskLevels,
       assignedToFilter, assignedToMe, isTeam, myAssignedSet, assignments,
-      localStatuses, statusFilter]);
+      localStatuses, statusFilter, churnEmailOnly, localChurnIds]);
 
   const searched = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -327,62 +337,90 @@ export default function Dashboard({
 
   // Status-tag handlers
   const handleConfirmStatus = useCallback(
-    async (status: CustomerStatusType | null, reason: string) => {
+    async (status: CustomerStatusType | null, reason: string, addToChurnEmail: boolean) => {
       if (!statusModalCustomer) return;
 
-      const encodedId = encodeURIComponent(statusModalCustomer.id);
-      let res: Response;
-      if (status === null) {
-        res = await fetch(`/api/customers/${encodedId}/status`, { method: 'DELETE' });
-      } else {
-        res = await fetch(`/api/customers/${encodedId}/status`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status, reason, customerName: statusModalCustomer.name }),
+      const customer = statusModalCustomer;
+      const encodedId = encodeURIComponent(customer.id);
+      const currentStatus = localStatuses[customer.id]?.status ?? null;
+      const statusChanged = status !== currentStatus;
+      const churnChanged = addToChurnEmail !== localChurnIds.has(customer.id);
+
+      // 1. Persist the status change (only if it actually changed)
+      if (statusChanged) {
+        let res: Response;
+        if (status === null) {
+          res = await fetch(`/api/customers/${encodedId}/status`, { method: 'DELETE' });
+        } else {
+          res = await fetch(`/api/customers/${encodedId}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status, reason, customerName: customer.name }),
+          });
+        }
+        // Session expired or no longer valid → send them to log in again
+        // rather than surfacing a raw "Forbidden".
+        if (res.status === 401 || res.status === 403) {
+          window.location.href = '/login';
+          return;
+        }
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error ?? 'Failed to update status.');
+        }
+
+        // Optimistically update the badge so it changes the moment the modal closes.
+        setLocalStatuses((prev) => {
+          const next = { ...prev };
+          if (status === null) {
+            delete next[customer.id];
+          } else {
+            const isPendingClosure = isTeam && status === 'closed';
+            next[customer.id] = {
+              customerId: customer.id,
+              customerName: customer.name,
+              status,
+              approvalStatus: isPendingClosure ? 'pending' : 'approved',
+              reason: reason || null,
+              setById: currentUser.id,
+              setByName: currentUser.name,
+              setAt: new Date().toISOString(),
+              approvedById: isAdmin ? currentUser.id : null,
+              approvedByName: isAdmin ? currentUser.name : null,
+              approvedAt: isAdmin ? new Date().toISOString() : null,
+            };
+          }
+          return next;
         });
       }
-      // Session expired or no longer valid → send them to log in again
-      // rather than surfacing a raw "Forbidden".
-      if (res.status === 401 || res.status === 403) {
-        window.location.href = '/login';
-        return;
-      }
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? 'Failed to update status.');
-      }
 
-      // Optimistically update the badge so it changes the moment the modal closes,
-      // instead of waiting several seconds for router.refresh() to complete.
-      setLocalStatuses((prev) => {
-        const next = { ...prev };
-        if (status === null) {
-          delete next[statusModalCustomer.id];
-        } else {
-          const isPendingClosure = isTeam && status === 'closed';
-          next[statusModalCustomer.id] = {
-            customerId: statusModalCustomer.id,
-            customerName: statusModalCustomer.name,
-            status,
-            approvalStatus: isPendingClosure ? 'pending' : 'approved',
-            reason: reason || null,
-            setById: currentUser.id,
-            setByName: currentUser.name,
-            setAt: new Date().toISOString(),
-            approvedById: isAdmin ? currentUser.id : null,
-            approvedByName: isAdmin ? currentUser.name : null,
-            approvedAt: isAdmin ? new Date().toISOString() : null,
-          };
+      // 2. Persist the churn email list flag (only if it changed)
+      if (churnChanged) {
+        const res = await fetch(`/api/customers/${encodedId}/churn-email`, {
+          method: addToChurnEmail ? 'POST' : 'DELETE',
+        });
+        if (res.status === 401 || res.status === 403) {
+          window.location.href = '/login';
+          return;
         }
-        return next;
-      });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error ?? 'Failed to update the churn email list.');
+        }
+        setLocalChurnIds((prev) => {
+          const next = new Set(prev);
+          if (addToChurnEmail) next.add(customer.id);
+          else next.delete(customer.id);
+          return next;
+        });
+      }
 
       setStatusModalCustomer(null);
-      // Sync server data in the background; when it arrives the useEffect above
-      // will overwrite localStatuses with the authoritative values.
+      // Sync server data in the background; when it arrives the useEffects above
+      // will overwrite localStatuses / localChurnIds with the authoritative values.
       router.refresh();
     },
-    [statusModalCustomer, router, isTeam, isAdmin, currentUser],
+    [statusModalCustomer, router, isTeam, isAdmin, currentUser, localStatuses, localChurnIds],
   );
 
   return (
@@ -439,6 +477,7 @@ export default function Dashboard({
           assignments={assignments}
           users={users}
           statuses={localStatuses}
+          churnEmailIds={localChurnIds}
           onClear={resetSelection}
           onAssign={onAssign}
           onMerge={onMerge ? setMergeCustomers : undefined}
@@ -545,6 +584,7 @@ export default function Dashboard({
         <StatusModal
           customerName={statusModalCustomer.name}
           currentStatus={localStatuses[statusModalCustomer.id]?.status ?? null}
+          currentChurnEmail={localChurnIds.has(statusModalCustomer.id)}
           isTeam={isTeam}
           onClose={() => setStatusModalCustomer(null)}
           onConfirm={handleConfirmStatus}
@@ -591,6 +631,7 @@ export default function Dashboard({
         hideAssigned={false}
         assignedToMe={assignedToMe}
         statusFilter={statusFilter}
+        churnEmailOnly={churnEmailOnly}
         assignedToFilter={assignedToFilter}
         assignableUsers={isAdmin ? users : []}
         onCustomerType={(v) => { setCustomerType(v); resetSelection(); }}
@@ -601,6 +642,7 @@ export default function Dashboard({
         onHideAssigned={() => {}}
         onAssignedToMe={(v) => { setAssignedToMe(v); resetSelection(); }}
         onStatusToggle={handleStatusToggle}
+        onChurnEmailToggle={(v) => { setChurnEmailOnly(v); resetSelection(); }}
         onAssignedTo={(v) => { setAssignedToFilter(v); resetSelection(); }}
       />
     </div>

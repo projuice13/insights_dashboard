@@ -23,6 +23,7 @@ interface Props {
   currentUser: { id: string; name: string };
   myAssignedIds: string[];
   customerStatuses: CustomerStatuses;
+  churnEmailIds: string[];
   notifications: AppNotification[];
 }
 
@@ -34,6 +35,7 @@ export default function TeamDashboardClient({
   currentUser,
   myAssignedIds,
   customerStatuses,
+  churnEmailIds,
   notifications,
 }: Props) {
   const customers = useMemo(() => rehydrateDates(initialCustomers), [initialCustomers]);
@@ -47,6 +49,7 @@ export default function TeamDashboardClient({
       initialCustomersWithComments={initialCustomersWithComments}
       myAssignedIds={myAssignedIds}
       customerStatuses={customerStatuses}
+      churnEmailIds={churnEmailIds}
       notifications={notifications}
     />
   );

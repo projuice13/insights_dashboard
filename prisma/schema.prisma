@@ -22,6 +22,7 @@ model User {
   statusesApproved  CustomerStatus[] @relation("StatusApprover")
   notifications     Notification[]
   customerMerges    CustomerMerge[]
+  churnEmailAdds    ChurnEmailContact[]
 }
 
 model CustomerStatus {
@@ -115,6 +116,14 @@ model CustomerMerge {
   mergedBy          User     @relation(fields: [mergedById], references: [id])
 
   @@index([canonicalId])
+}
+
+// Presence of a row = customer is on the churn email list. Independent of status.
+model ChurnEmailContact {
+  customerId String   @id
+  addedAt    DateTime @default(now())
+  addedById  String
+  addedBy    User     @relation(fields: [addedById], references: [id])
 }
 
 model Comment {

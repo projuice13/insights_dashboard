@@ -11,6 +11,7 @@ interface SelectionActionBarProps {
   assignments: Assignments;
   users: AdminUser[];
   statuses: CustomerStatuses;
+  churnEmailIds: Set<string>;
   onClear: () => void;
   onAssign?: (ids: string[], user: AdminUser | null) => void;
   onMerge?: (customers: Customer[]) => void;
@@ -22,6 +23,7 @@ export default function SelectionActionBar({
   assignments,
   users,
   statuses,
+  churnEmailIds,
   onClear,
   onAssign,
   onMerge,
@@ -47,9 +49,9 @@ export default function SelectionActionBar({
         body: JSON.stringify({ customerIds: selectedCustomers.map((c) => c.id) }),
       });
       const latestNotes = res.ok ? await res.json() : {};
-      exportCustomersCSV(selectedCustomers, latestNotes, assignments, statuses);
+      exportCustomersCSV(selectedCustomers, latestNotes, assignments, statuses, churnEmailIds);
     } catch {
-      exportCustomersCSV(selectedCustomers, {}, assignments, statuses);
+      exportCustomersCSV(selectedCustomers, {}, assignments, statuses, churnEmailIds);
     } finally {
       setDownloading(false);
     }

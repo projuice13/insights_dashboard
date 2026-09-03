@@ -43,6 +43,7 @@ interface FilterPanelProps {
   hideAssigned: boolean;
   assignedToMe?: boolean;
   statusFilter?: Set<StatusFilterValue>;
+  churnEmailOnly?: boolean;
   // Admin-only: filter by assignee
   assignedToFilter?: string;   // 'unassigned' | 'all' | user.name
   assignableUsers?: AdminUser[];
@@ -55,6 +56,7 @@ interface FilterPanelProps {
   onHideAssigned: (v: boolean) => void;
   onAssignedToMe?: (v: boolean) => void;
   onStatusToggle?: (v: StatusFilterValue) => void;
+  onChurnEmailToggle?: (v: boolean) => void;
   onAssignedTo?: (v: string) => void;
 }
 
@@ -76,6 +78,7 @@ export default function FilterPanel({
   hideAssigned,
   assignedToMe = true,
   statusFilter,
+  churnEmailOnly = false,
   assignedToFilter = 'all',
   assignableUsers = [],
   onCustomerType,
@@ -86,6 +89,7 @@ export default function FilterPanel({
   onHideAssigned,
   onAssignedToMe,
   onStatusToggle,
+  onChurnEmailToggle,
   onAssignedTo,
 }: FilterPanelProps) {
   // Prevent body scroll while panel is open
@@ -212,6 +216,21 @@ export default function FilterPanel({
               })}
             </div>
           </div>
+
+          {/* Churn email list */}
+          {onChurnEmailToggle && (
+            <div className="border-t border-[#F3F4F6] pt-3">
+              <label className="flex cursor-pointer items-center gap-2.5">
+                <input
+                  type="checkbox"
+                  checked={churnEmailOnly}
+                  onChange={(e) => onChurnEmailToggle(e.target.checked)}
+                  className="h-3.5 w-3.5 cursor-pointer rounded border-[#D1D5DB] text-[#374151] focus:ring-0"
+                />
+                <span className="text-sm text-[#374151]">On churn email list</span>
+              </label>
+            </div>
+          )}
 
           {/* Assignment filters */}
           <div className="space-y-3 border-t border-[#F3F4F6] pt-1">

@@ -30,6 +30,7 @@ interface Props {
   users: AdminUser[];
   currentUser: { id: string; name: string };
   customerStatuses: CustomerStatuses;
+  churnEmailIds: string[];
   notifications: AppNotification[];
 }
 
@@ -40,6 +41,7 @@ export default function AdminDashboardClient({
   users,
   currentUser,
   customerStatuses,
+  churnEmailIds,
   notifications,
 }: Props) {
   const router = useRouter();
@@ -204,6 +206,7 @@ export default function AdminDashboardClient({
         currentUser={currentUser}
         initialCustomersWithComments={initialCustomersWithComments}
         customerStatuses={customerStatuses}
+        churnEmailIds={churnEmailIds}
         notifications={notifications}
         importStats={importStats}
         onAssign={handleAssign}
