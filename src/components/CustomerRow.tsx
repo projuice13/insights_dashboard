@@ -136,7 +136,7 @@ export default function CustomerRow({
             ) : (
               <>
                 <span className="h-1.5 w-1.5 rounded-full bg-[#D1D5DB]" />
-                Active
+                No Status
               </>
             )}
           </button>
@@ -164,7 +164,7 @@ export default function CustomerRow({
             ) : (
               <>
                 <span className="h-1.5 w-1.5 rounded-full bg-[#D1D5DB]" />
-                Active
+                No Status
               </>
             )}
           </span>
