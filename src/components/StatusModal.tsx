@@ -226,9 +226,7 @@ export default function StatusModal({
               ? 'Saving…'
               : isTeam && isClosure
                 ? 'Submit request'
-                : selected === null
-                  ? 'Set to No Status'
-                  : 'Save status'}
+                : 'Save'}
           </button>
           </div>
         </div>
