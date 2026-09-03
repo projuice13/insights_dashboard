@@ -26,6 +26,7 @@ import NotificationsMenu from './NotificationsMenu';
 import StatusModal from './StatusModal';
 import AssignModal from './AssignModal';
 import MergeModal from './MergeModal';
+import { exportCustomersCSV } from '@/lib/exportCSV';
 
 interface DashboardProps {
   customers: Customer[];
@@ -86,6 +87,7 @@ export default function Dashboard({
   const [mergeCustomers, setMergeCustomers] = useState<Customer[] | null>(null);
   const [mergeSending, setMergeSending] = useState(false);
   const [mergeError, setMergeError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
   // Local copy of statuses so we can update the badge instantly (optimistic),
   // then let router.refresh() sync the server data in the background.
   const [localStatuses, setLocalStatuses] = useState<CustomerStatuses>(customerStatuses);
@@ -313,6 +315,26 @@ export default function Dashboard({
     }
   };
 
+  // CSV download of the currently filtered list (used by team users, who don't
+  // have the admin selection/action bar). Enriches rows with latest notes.
+  const handleDownloadVisible = async (list: Customer[]) => {
+    if (list.length === 0) return;
+    setDownloading(true);
+    try {
+      const res = await fetch('/api/comments/latest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerIds: list.map((c) => c.id) }),
+      });
+      const latestNotes = res.ok ? await res.json() : {};
+      exportCustomersCSV(list, latestNotes, assignments, localStatuses);
+    } catch {
+      exportCustomersCSV(list, {}, assignments, localStatuses);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const handleCommentAdded = useCallback((customerId: string) => {
     setCustomersWithComments((prev) => new Set([...prev, customerId]));
   }, []);
@@ -477,6 +499,28 @@ export default function Dashboard({
             <p className="text-xs text-[#9CA3AF]">
               {searched.length} result{searched.length !== 1 ? 's' : ''}
             </p>
+
+            {/* Team users get a direct CSV download of their current list
+                (admins download via the selection action bar instead). */}
+            {isTeam && (
+              <button
+                onClick={() => handleDownloadVisible(searched)}
+                disabled={downloading || searched.length === 0}
+                className="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium text-[#6B7280] transition-colors hover:border-[#9CA3AF] hover:text-[#374151] disabled:opacity-50"
+              >
+                {downloading ? (
+                  <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                ) : (
+                  <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 2v8M4.5 6.5L8 10l3.5-3.5M2.5 13h11" />
+                  </svg>
+                )}
+                Download CSV
+              </button>
+            )}
           </div>
 
           {/* Search */}
