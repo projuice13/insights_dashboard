@@ -57,20 +57,20 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * If a customer was deactivated (or had a pending deactivation request) and a
+ * If a customer was closed (or had a pending closure request) and a
  * new order has arrived, clear that status — they're clearly still trading.
- * Other status tags (Hot/Dormant/etc.) are kept untouched as they're informational.
+ * Other status tags (Ordered/Dormant/etc.) are kept untouched as they're informational.
  */
 async function reactivateIfOrdered(newOrders: RawOrder[]) {
   const newCustomerIds = Array.from(
     new Set(newOrders.map((o) => makeId(o.customer_name, o.postcode))),
   );
 
-  // Only auto-clear DEACTIVATED status; other tags stay
+  // Only auto-clear CLOSED status; other tags stay
   const deactivated = await prisma.customerStatus.findMany({
     where: {
       customerId: { in: newCustomerIds },
-      status: 'deactivated',
+      status: 'closed',
     },
   });
 
@@ -101,8 +101,8 @@ async function reactivateIfOrdered(newOrders: RawOrder[]) {
         customerName: d.customerName,
         message:
           d.approvalStatus === 'pending'
-            ? `${d.customerName} placed a new order — pending deactivation request cancelled.`
-            : `${d.customerName} placed a new order — automatically reactivated.`,
+            ? `${d.customerName} placed a new order — pending closure request cancelled.`
+            : `${d.customerName} placed a new order — automatically reopened.`,
       });
     }
     if (d.approvalStatus === 'pending' && !adminIds.has(d.setById)) {
@@ -111,7 +111,7 @@ async function reactivateIfOrdered(newOrders: RawOrder[]) {
         type: 'auto_reactivated',
         customerId: d.customerId,
         customerName: d.customerName,
-        message: `Your deactivation request for ${d.customerName} was cancelled — they placed a new order.`,
+        message: `Your closure request for ${d.customerName} was cancelled — they placed a new order.`,
       });
     }
   }

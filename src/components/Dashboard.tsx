@@ -71,9 +71,9 @@ export default function Dashboard({
   // 'all' = default (no filter); 'unassigned' = no assignee; user name = that person's contacts
   const [assignedToFilter, setAssignedToFilter] = useState<string>('all');
   const [assignedToMe, setAssignedToMe] = useState(true); // team default: on
-  // Default: all statuses selected EXCEPT 'deactivated' (matches old behaviour)
+  // Default: all statuses selected EXCEPT 'closed'
   const [statusFilter, setStatusFilter] = useState<Set<StatusFilterValue>>(
-    () => new Set<StatusFilterValue>(['active', 'hot', 'possible', 'seasonal', 'no_response', 'dormant']),
+    () => new Set<StatusFilterValue>(['active', 'ordered', 'awaiting_order', 'pending', 'dormant', 'lost']),
   );
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -93,7 +93,7 @@ export default function Dashboard({
 
   // Helper: default state of the status filter (used to detect "deviation from default")
   const DEFAULT_STATUS_FILTER: ReadonlySet<StatusFilterValue> = new Set<StatusFilterValue>([
-    'active', 'hot', 'possible', 'seasonal', 'no_response', 'dormant',
+    'active', 'ordered', 'awaiting_order', 'pending', 'dormant', 'lost',
   ]);
   const statusFilterIsDefault =
     statusFilter.size === DEFAULT_STATUS_FILTER.size &&
@@ -136,7 +136,7 @@ export default function Dashboard({
     setRiskLevels(new Set());
     setAssignedToFilter('all');
     setAssignedToMe(true);
-    setStatusFilter(new Set(['active', 'hot', 'possible', 'seasonal', 'no_response', 'dormant']));
+    setStatusFilter(new Set(['active', 'ordered', 'awaiting_order', 'pending', 'dormant', 'lost']));
     resetSelection();
   }, []);
 
@@ -159,10 +159,10 @@ export default function Dashboard({
       const cs = localStatuses[c.id];
       const effectiveStatus: StatusFilterValue =
         cs && cs.approvalStatus === 'approved' ? cs.status : 'active';
-      // Approved 'deactivated' customers are hidden from team users full-stop.
-      // Pending deactivations are treated as 'active' so they stay visible until resolved.
+      // Approved 'closed' customers are hidden from team users full-stop.
+      // Pending closures are treated as 'active' so they stay visible until resolved.
       if (isTeam) {
-        if (cs?.status === 'deactivated' && cs.approvalStatus === 'approved') return false;
+        if (cs?.status === 'closed' && cs.approvalStatus === 'approved') return false;
       } else {
         if (!statusFilter.has(effectiveStatus)) return false;
       }
@@ -359,12 +359,12 @@ export default function Dashboard({
         if (status === null) {
           delete next[statusModalCustomer.id];
         } else {
-          const isPendingDeactivation = isTeam && status === 'deactivated';
+          const isPendingClosure = isTeam && status === 'closed';
           next[statusModalCustomer.id] = {
             customerId: statusModalCustomer.id,
             customerName: statusModalCustomer.name,
             status,
-            approvalStatus: isPendingDeactivation ? 'pending' : 'approved',
+            approvalStatus: isPendingClosure ? 'pending' : 'approved',
             reason: reason || null,
             setById: currentUser.id,
             setByName: currentUser.name,

@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 
 /**
  * POST /api/customer-statuses/[id]/reject
- * Admin rejects a pending deactivation. Deletes the row, clears stale
+ * Admin rejects a pending closure. Deletes the row, clears stale
  * notifications, and notifies the team member who requested it.
  */
 export async function POST(
@@ -39,7 +39,7 @@ export async function POST(
         type: 'deactivation_rejected',
         customerId,
         customerName: cs.customerName,
-        message: `${session.name} rejected your deactivation request for ${cs.customerName}.`,
+        message: `${session.name} rejected your closure request for ${cs.customerName}.`,
       },
     }),
   ]);

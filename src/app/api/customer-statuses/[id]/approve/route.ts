@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 
 /**
  * POST /api/customer-statuses/[id]/approve
- * Admin approves a pending deactivation request. Updates the row to approved,
+ * Admin approves a pending closure request. Updates the row to approved,
  * clears stale pending-request notifications for other admins, and notifies
  * the requester.
  *
@@ -52,7 +52,7 @@ export async function POST(
         type: 'deactivation_approved',
         customerId,
         customerName: cs.customerName,
-        message: `${session.name} approved your deactivation request for ${cs.customerName}.`,
+        message: `${session.name} approved your closure request for ${cs.customerName}.`,
       },
     }),
   ]);

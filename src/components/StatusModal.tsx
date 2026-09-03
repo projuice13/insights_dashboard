@@ -5,7 +5,7 @@ import { CustomerStatusType, STATUS_CONFIG } from '@/lib/types';
 
 interface Props {
   customerName: string;
-  currentStatus: CustomerStatusType | null; // null = currently 'Active'
+  currentStatus: CustomerStatusType | null; // null = currently 'No Status'
   isTeam: boolean;
   onClose: () => void;
   // status === null means clear to Active
@@ -13,7 +13,7 @@ interface Props {
 }
 
 const STATUS_ORDER: CustomerStatusType[] = [
-  'hot', 'possible', 'seasonal', 'no_response', 'dormant', 'deactivated',
+  'ordered', 'awaiting_order', 'pending', 'dormant', 'lost', 'closed',
 ];
 
 export default function StatusModal({
@@ -36,8 +36,8 @@ export default function StatusModal({
     return () => document.removeEventListener('keydown', handler);
   }, [onClose, submitting]);
 
-  const isDeactivation = selected === 'deactivated';
-  const reasonRequired = isDeactivation;
+  const isClosure = selected === 'closed';
+  const reasonRequired = isClosure;
   const reasonLabel = reasonRequired ? 'Reason (required)' : 'Reason (optional)';
   const noChange = selected === currentStatus;
 
@@ -84,7 +84,7 @@ export default function StatusModal({
           <div>
             <p className="mb-2 text-xs font-medium text-[#6B7280]">Status</p>
             <div className="grid grid-cols-3 gap-2">
-              {/* Active (clears) */}
+              {/* No Status (clears) */}
               <button
                 type="button"
                 onClick={() => setSelected(null)}
@@ -95,7 +95,7 @@ export default function StatusModal({
                     : 'border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#9CA3AF] hover:text-[#374151]'
                 }`}
               >
-                Active
+                No Status
               </button>
               {STATUS_ORDER.map((s) => {
                 const cfg = STATUS_CONFIG[s];
@@ -120,11 +120,11 @@ export default function StatusModal({
             </div>
           </div>
 
-          {/* Approval notice for team users picking Deactivated */}
-          {isTeam && isDeactivation && (
+          {/* Approval notice for team users picking Closed */}
+          {isTeam && isClosure && (
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Deactivation requires admin approval. This will be sent as a request — the customer
-              stays visible (with a Pending badge) until an admin approves it.
+              Closing a customer requires admin approval. This will be sent as a request — the customer
+              stays visible (with a Pending approval badge) until an admin approves it.
             </p>
           )}
 
@@ -185,7 +185,7 @@ export default function StatusModal({
             onClick={handleSubmit}
             disabled={submitting || noChange}
             className={`cursor-pointer inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-medium text-white transition-colors disabled:cursor-default disabled:opacity-60 ${
-              isDeactivation ? 'bg-red-600 hover:bg-red-700' : 'bg-[#111827] hover:bg-[#374151]'
+              isClosure ? 'bg-red-600 hover:bg-red-700' : 'bg-[#111827] hover:bg-[#374151]'
             }`}
           >
             {submitting && (
@@ -209,10 +209,10 @@ export default function StatusModal({
             )}
             {submitting
               ? 'Saving…'
-              : isTeam && isDeactivation
+              : isTeam && isClosure
                 ? 'Submit request'
                 : selected === null
-                  ? 'Set to Active'
+                  ? 'Set to No Status'
                   : 'Save status'}
           </button>
           </div>

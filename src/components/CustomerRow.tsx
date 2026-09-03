@@ -42,11 +42,11 @@ export default function CustomerRow({
   onSetStatus,
 }: CustomerRowProps) {
   const cfg = customerStatus ? STATUS_CONFIG[customerStatus.status] : null;
-  const isPendingDeactivation =
-    customerStatus?.status === 'deactivated' &&
+  const isPendingClosure =
+    customerStatus?.status === 'closed' &&
     customerStatus.approvalStatus === 'pending';
-  const isApprovedDeactivation =
-    customerStatus?.status === 'deactivated' &&
+  const isApprovedClosure =
+    customerStatus?.status === 'closed' &&
     customerStatus.approvalStatus === 'approved';
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -85,7 +85,7 @@ export default function CustomerRow({
           <button
             onClick={() => onClick(customer)}
             className={`cursor-pointer inline-flex items-center gap-1.5 text-[13px] font-medium hover:underline text-left ${
-              isApprovedDeactivation ? 'text-[#9CA3AF]' : 'text-[#111827] hover:text-[#374151]'
+              isApprovedClosure ? 'text-[#9CA3AF]' : 'text-[#111827] hover:text-[#374151]'
             }`}
           >
             {customer.name}
@@ -116,17 +116,17 @@ export default function CustomerRow({
             onClick={(e) => { e.stopPropagation(); onSetStatus(customer); }}
             title={canEditStatus ? 'Click to change status' : undefined}
             className={`cursor-pointer inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 transition-opacity hover:opacity-80 ${
-              isPendingDeactivation
+              isPendingClosure
                 ? 'bg-amber-50 text-amber-700 ring-amber-200'
                 : cfg
                 ? `${cfg.bg} ${cfg.text} ${cfg.ring}`
                 : 'bg-[#F3F4F6] text-[#9CA3AF] ring-[#E5E7EB]'
             }`}
           >
-            {isPendingDeactivation ? (
+            {isPendingClosure ? (
               <>
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                Pending
+                Pending approval
               </>
             ) : cfg ? (
               <>
@@ -144,17 +144,17 @@ export default function CustomerRow({
           // Read-only badge (no permission to edit)
           <span
             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${
-              isPendingDeactivation
+              isPendingClosure
                 ? 'bg-amber-50 text-amber-700 ring-amber-200'
                 : cfg
                 ? `${cfg.bg} ${cfg.text} ${cfg.ring}`
                 : 'bg-[#F3F4F6] text-[#9CA3AF] ring-[#E5E7EB]'
             }`}
           >
-            {isPendingDeactivation ? (
+            {isPendingClosure ? (
               <>
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                Pending
+                Pending approval
               </>
             ) : cfg ? (
               <>

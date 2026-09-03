@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { CustomerStatusType } from '@/lib/types';
 
 const VALID_STATUSES: CustomerStatusType[] = [
-  'deactivated', 'dormant', 'no_response', 'possible', 'seasonal', 'hot',
+  'ordered', 'awaiting_order', 'pending', 'dormant', 'lost', 'closed',
 ];
 
 /**
@@ -12,11 +12,11 @@ const VALID_STATUSES: CustomerStatusType[] = [
  * Body: { status: CustomerStatusType, reason?: string, customerName: string }
  *
  * - Admin sets ANY status → applied immediately (approvalStatus = 'approved')
- * - Team sets 'deactivated' → pending request, notifies all admins (existing behaviour)
+ * - Team sets 'closed' → pending request, notifies all admins (existing behaviour)
  * - Team sets any other status → applied immediately
  *
- * Behaviour for team members trying to deactivate a customer that's already pending
- * or deactivated: returns 409 (use the approve/reject flow instead).
+ * Behaviour for team members trying to close a customer that's already pending
+ * or closed: returns 409 (use the approve/reject flow instead).
  */
 export async function POST(
   req: NextRequest,
@@ -38,19 +38,19 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid status.' }, { status: 400 });
   }
 
-  if (status === 'deactivated' && !reason?.trim()) {
-    return NextResponse.json({ error: 'A reason is required for deactivation.' }, { status: 400 });
+  if (status === 'closed' && !reason?.trim()) {
+    return NextResponse.json({ error: 'A reason is required to close a customer.' }, { status: 400 });
   }
 
   const isAdmin = session.role === 'admin';
-  const isDeactivation = status === 'deactivated';
+  const isClosure = status === 'closed';
 
-  // For team users requesting deactivation, prevent duplicate requests
-  if (!isAdmin && isDeactivation) {
+  // For team users requesting closure, prevent duplicate requests
+  if (!isAdmin && isClosure) {
     const existing = await prisma.customerStatus.findUnique({ where: { customerId } });
-    if (existing && existing.status === 'deactivated') {
+    if (existing && existing.status === 'closed') {
       return NextResponse.json(
-        { error: 'This customer already has a deactivation in progress.' },
+        { error: 'This customer already has a closure in progress.' },
         { status: 409 },
       );
     }
@@ -58,7 +58,7 @@ export async function POST(
 
   const now = new Date();
   const trimmedReason = reason?.trim() || null;
-  const needsApproval = !isAdmin && isDeactivation;
+  const needsApproval = !isAdmin && isClosure;
 
   try {
     await prisma.customerStatus.upsert({
@@ -85,7 +85,7 @@ export async function POST(
       },
     });
 
-    // Send notifications only when a team member requests deactivation
+    // Send notifications only when a team member requests closure
     if (needsApproval) {
       const admins = await prisma.user.findMany({
         where: { role: 'admin' },
@@ -97,7 +97,7 @@ export async function POST(
           type: 'deactivation_request',
           customerId,
           customerName,
-          message: `${session.name} wants to deactivate ${customerName} — ${trimmedReason ?? 'no reason given'}`,
+          message: `${session.name} wants to close ${customerName} — ${trimmedReason ?? 'no reason given'}`,
         })),
       });
     }
@@ -140,8 +140,8 @@ export async function POST(
 
 /**
  * DELETE /api/customers/[id]/status
- * Removes a status tag (back to "Active").
- * Team members can't remove 'deactivated' status (only admins reactivate).
+ * Removes a status tag (back to "No Status").
+ * Team members can't remove a 'closed' status (only admins reopen).
  */
 export async function DELETE(
   _req: Request,
@@ -155,10 +155,10 @@ export async function DELETE(
   const { id: customerId } = await params;
 
   if (session.role !== 'admin') {
-    // Team users may only clear a status that is NOT a deactivation
+    // Team users may only clear a status that is NOT a closure
     const existing = await prisma.customerStatus.findUnique({ where: { customerId } });
-    if (existing && existing.status === 'deactivated') {
-      return NextResponse.json({ error: 'Only admins can reactivate.' }, { status: 403 });
+    if (existing && existing.status === 'closed') {
+      return NextResponse.json({ error: 'Only admins can reopen a closed customer.' }, { status: 403 });
     }
   }
 

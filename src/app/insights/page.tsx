@@ -45,7 +45,7 @@ export default async function AdminPage() {
   });
   const customersWithComments = commentedCustomers.map((c) => c.customerId);
 
-  // Customer status tags (deactivated, dormant, hot, etc.)
+  // Customer status tags (ordered, awaiting_order, pending, dormant, lost, closed)
   const statusRows = await prisma.customerStatus.findMany({
     include: {
       setBy: { select: { name: true } },

@@ -247,7 +247,7 @@ export default function FilterPanel({
               <div>
                 <p className="mb-2 text-xs font-medium text-[#6B7280]">Customer status</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {/* "Active" chip — customers with no tag set */}
+                  {/* "No Status" chip — customers with no tag set */}
                   {(() => {
                     const selected = statusFilter.has('active');
                     return (
@@ -255,16 +255,16 @@ export default function FilterPanel({
                         onClick={() => onStatusToggle('active')}
                         className={`cursor-pointer inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
                           selected
-                            ? 'bg-green-50 text-green-700 ring-1 ring-green-200'
+                            ? 'bg-[#F3F4F6] text-[#374151] ring-1 ring-[#E5E7EB]'
                             : 'border border-[#E5E7EB] bg-white text-[#9CA3AF] hover:border-[#9CA3AF] hover:text-[#374151]'
                         }`}
                       >
-                        <span className={`h-1.5 w-1.5 rounded-full ${selected ? 'bg-green-500' : 'bg-[#D1D5DB]'}`} />
-                        Active
+                        <span className={`h-1.5 w-1.5 rounded-full ${selected ? 'bg-[#9CA3AF]' : 'bg-[#D1D5DB]'}`} />
+                        No Status
                       </button>
                     );
                   })()}
-                  {(['hot', 'possible', 'seasonal', 'no_response', 'dormant', 'deactivated'] as CustomerStatusType[]).map((s) => {
+                  {(['ordered', 'awaiting_order', 'pending', 'dormant', 'lost', 'closed'] as CustomerStatusType[]).map((s) => {
                     const cfg = STATUS_CONFIG[s];
                     const selected = statusFilter.has(s);
                     return (

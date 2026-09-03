@@ -65,14 +65,14 @@ export interface Customer {
 // assignments: Record<customerId, teamMemberName>
 export type Assignments = Record<string, string>;
 
-// All possible customer status tags. 'active' is implicit (absence of any row).
+// All possible customer status tags. 'No Status' is implicit (absence of any row).
 export type CustomerStatusType =
-  | 'deactivated'
+  | 'ordered'
+  | 'awaiting_order'
+  | 'pending'
   | 'dormant'
-  | 'no_response'
-  | 'possible'
-  | 'seasonal'
-  | 'hot';
+  | 'lost'
+  | 'closed';
 
 // Display config for each status tag — bg/text/dot Tailwind classes are referenced
 // statically here so the JIT picks them up.
@@ -80,12 +80,12 @@ export const STATUS_CONFIG: Record<
   CustomerStatusType,
   { label: string; bg: string; text: string; dot: string; ring: string }
 > = {
-  hot:         { label: 'Hot',         bg: 'bg-red-50',     text: 'text-red-700',     ring: 'ring-red-200',     dot: 'bg-red-500'    },
-  possible:    { label: 'Possible',    bg: 'bg-blue-50',    text: 'text-blue-700',    ring: 'ring-blue-200',    dot: 'bg-blue-500'   },
-  seasonal:    { label: 'Seasonal',    bg: 'bg-purple-50',  text: 'text-purple-700',  ring: 'ring-purple-200',  dot: 'bg-purple-500' },
-  no_response: { label: 'No Response', bg: 'bg-amber-50',   text: 'text-amber-700',   ring: 'ring-amber-200',   dot: 'bg-amber-500'  },
-  dormant:     { label: 'Dormant',     bg: 'bg-slate-50',   text: 'text-slate-700',   ring: 'ring-slate-200',   dot: 'bg-slate-500'  },
-  deactivated: { label: 'Deactivated', bg: 'bg-stone-100',  text: 'text-stone-700',   ring: 'ring-stone-200',   dot: 'bg-stone-500'  },
+  ordered:        { label: 'Ordered',        bg: 'bg-green-50',   text: 'text-green-700',   ring: 'ring-green-200',   dot: 'bg-green-500'  },
+  awaiting_order: { label: 'Awaiting Order', bg: 'bg-blue-50',    text: 'text-blue-700',    ring: 'ring-blue-200',    dot: 'bg-blue-500'   },
+  pending:        { label: 'Pending',        bg: 'bg-purple-50',  text: 'text-purple-700',  ring: 'ring-purple-200',  dot: 'bg-purple-500' },
+  dormant:        { label: 'Dormant',        bg: 'bg-slate-50',   text: 'text-slate-700',   ring: 'ring-slate-200',   dot: 'bg-slate-500'  },
+  lost:           { label: 'Lost',           bg: 'bg-red-50',     text: 'text-red-700',     ring: 'ring-red-200',     dot: 'bg-red-500'    },
+  closed:         { label: 'Closed',         bg: 'bg-stone-100',  text: 'text-stone-700',   ring: 'ring-stone-200',   dot: 'bg-stone-500'  },
 };
 
 // One entry per customer with a non-default status (i.e. anything other than Active)
@@ -148,6 +148,6 @@ export type SpendFilter = 'all' | '0-999' | '1000-1999' | '2000+';
 export type HideAssignedFilter = boolean;
 
 // Status filter: a Set of statuses that should appear in the list. 'active' represents
-// customers with no status row (the default tag). Default value when nothing filtered:
-// every status selected EXCEPT 'deactivated'.
+// customers with no status row (the default "No Status" tag). Default value when nothing
+// filtered: every status selected EXCEPT 'closed'.
 export type StatusFilterValue = 'active' | CustomerStatusType;
