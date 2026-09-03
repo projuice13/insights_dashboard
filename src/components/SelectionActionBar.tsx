@@ -12,7 +12,7 @@ interface SelectionActionBarProps {
   users: AdminUser[];
   statuses: CustomerStatuses;
   onClear: () => void;
-  onAssign: (ids: string[], user: AdminUser | null) => void;
+  onAssign?: (ids: string[], user: AdminUser | null) => void;
   onMerge?: (customers: Customer[]) => void;
 }
 
@@ -56,7 +56,7 @@ export default function SelectionActionBar({
   };
 
   const handleUnassign = () => {
-    onAssign(selectedCustomers.map((c) => c.id), null);
+    onAssign?.(selectedCustomers.map((c) => c.id), null);
     onClear();
   };
 
@@ -101,7 +101,7 @@ export default function SelectionActionBar({
         return;
       }
 
-      onAssign(selectedCustomers.map((c) => c.id), pendingUser);
+      onAssign?.(selectedCustomers.map((c) => c.id), pendingUser);
       setPendingUser(null);
       onClear();
     } catch {
@@ -119,21 +119,23 @@ export default function SelectionActionBar({
           {selected.size === 1 ? 'customer' : 'customers'} selected
         </span>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-[#6B7280]">Assign to</label>
-            <select
-              defaultValue=""
-              onChange={handleAssignSelect}
-              className="cursor-pointer rounded-lg border border-[#E5E7EB] bg-white px-3 py-1.5 text-sm text-[#374151] outline-none focus:border-[#6B7280] focus:ring-0"
-            >
-              <option value="" disabled>Select team member…</option>
-              {users.map((m) => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </select>
-          </div>
+          {onAssign && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-[#6B7280]">Assign to</label>
+              <select
+                defaultValue=""
+                onChange={handleAssignSelect}
+                className="cursor-pointer rounded-lg border border-[#E5E7EB] bg-white px-3 py-1.5 text-sm text-[#374151] outline-none focus:border-[#6B7280] focus:ring-0"
+              >
+                <option value="" disabled>Select team member…</option>
+                {users.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {allAssigned && (
+          {onAssign && allAssigned && (
             <>
               <div className="h-4 w-px bg-[#E5E7EB]" />
               <button
@@ -157,7 +159,7 @@ export default function SelectionActionBar({
             </>
           )}
 
-          <div className="h-4 w-px bg-[#E5E7EB]" />
+          {(onAssign || onMerge) && <div className="h-4 w-px bg-[#E5E7EB]" />}
 
           <button
             onClick={handleDownload}

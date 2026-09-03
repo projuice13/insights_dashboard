@@ -68,17 +68,15 @@ export default function CustomerRow({
         selected ? 'bg-[#F3F4F6]' : 'hover:bg-[#F9FAFB]'
       }`}
     >
-      {!isTeam && (
-        <td className="pl-4 py-3 pr-2 w-8">
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={() => {}}
-            className="h-3.5 w-3.5 rounded border-[#D1D5DB] text-[#374151] focus:ring-0 focus:ring-offset-0 cursor-pointer"
-            onClick={(e) => { e.stopPropagation(); onSelect(customer.id, e.shiftKey); }}
-          />
-        </td>
-      )}
+      <td className="pl-4 py-3 pr-2 w-8">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => {}}
+          className="h-3.5 w-3.5 rounded border-[#D1D5DB] text-[#374151] focus:ring-0 focus:ring-offset-0 cursor-pointer"
+          onClick={(e) => { e.stopPropagation(); onSelect(customer.id, e.shiftKey); }}
+        />
+      </td>
       <td className="py-3 px-3">
         <RiskBadge riskLevel={customer.riskLevel} gapRatio={customer.gapRatio} compact />
       </td>

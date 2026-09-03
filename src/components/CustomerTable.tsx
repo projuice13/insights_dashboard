@@ -128,8 +128,8 @@ export default function CustomerTable({
   const somePageSelected = paginated.some((c) => selected.has(c.id));
   const allGlobalSelected = customers.length > 0 && customers.every((c) => selected.has(c.id));
   // Banner shows when the whole page is ticked but there are more rows on other pages
-  const showSelectAllBanner = !isTeam && allPageSelected && customers.length > paginated.length;
-  const colSpan = isTeam ? COLUMNS.length : COLUMNS.length + 1;
+  const showSelectAllBanner = allPageSelected && customers.length > paginated.length;
+  const colSpan = COLUMNS.length + 1;
 
   return (
     <div className="space-y-3">
@@ -141,29 +141,27 @@ export default function CustomerTable({
         ) : (
           <table className="w-full min-w-[960px] border-collapse text-left">
             <colgroup>
-              {!isTeam && <col style={{ width: '2rem' }} />}
+              <col style={{ width: '2rem' }} />
               {COLUMNS.map((col) => (
                 <col key={col.key} style={col.colWidth ? { width: col.colWidth } : undefined} />
               ))}
             </colgroup>
             <thead>
               <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB]">
-                {!isTeam && (
-                  <th className="pl-4 py-3 pr-2 w-8">
-                    <input
-                      type="checkbox"
-                      checked={allPageSelected}
-                      ref={(el) => {
-                        if (el) el.indeterminate = somePageSelected && !allPageSelected;
-                      }}
-                      onChange={() => {
-                        if (allPageSelected) onClearAll();
-                        else onSelectAll(paginated.map((c) => c.id));
-                      }}
-                      className="h-3.5 w-3.5 rounded border-[#D1D5DB] text-[#374151] focus:ring-0 cursor-pointer"
-                    />
-                  </th>
-                )}
+                <th className="pl-4 py-3 pr-2 w-8">
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = somePageSelected && !allPageSelected;
+                    }}
+                    onChange={() => {
+                      if (allPageSelected) onClearAll();
+                      else onSelectAll(paginated.map((c) => c.id));
+                    }}
+                    className="h-3.5 w-3.5 rounded border-[#D1D5DB] text-[#374151] focus:ring-0 cursor-pointer"
+                  />
+                </th>
                 {COLUMNS.map((col) => (
                   <th
                     key={col.key}
