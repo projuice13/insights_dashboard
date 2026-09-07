@@ -135,6 +135,17 @@ export default function Dashboard({
     return count;
   }, [customerType, region, lastOrdered, spend, riskLevels, assignedToFilter, assignedToMe, isTeam, statusFilterIsDefault, churnEmailOnly]);
 
+  // Signature of the active filters/search. Changes here reset pagination to
+  // page 1; a plain data refresh (status update etc.) leaves it untouched so
+  // the user keeps their place in a long list.
+  const pageResetKey = useMemo(() => JSON.stringify([
+    customerType, region,
+    lastOrdered.from?.getTime() ?? null, lastOrdered.to?.getTime() ?? null,
+    spend, Array.from(riskLevels).sort(), assignedToFilter, assignedToMe,
+    Array.from(statusFilter).sort(), churnEmailOnly, search.trim().toLowerCase(),
+  ]), [customerType, region, lastOrdered, spend, riskLevels, assignedToFilter,
+       assignedToMe, statusFilter, churnEmailOnly, search]);
+
   const handleClearAllFilters = useCallback(() => {
     setCustomerType('standard');
     setRegion('all');
@@ -558,6 +569,7 @@ export default function Dashboard({
           isTeam={isTeam}
           customerStatuses={localStatuses}
           assignedCustomerIds={isAdmin ? undefined : myAssignedSet}
+          resetPageKey={pageResetKey}
           onSelect={handleSelect}
           onSelectAll={handleSelectAll}
           onClearAll={resetSelection}

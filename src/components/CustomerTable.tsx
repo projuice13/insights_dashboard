@@ -15,6 +15,9 @@ interface CustomerTableProps {
   isTeam?: boolean;
   customerStatuses?: CustomerStatuses;
   assignedCustomerIds?: Set<string>;
+  // Changes when the filters/search change — used to reset to page 1. A plain
+  // data refresh (e.g. after a status update) must NOT change this.
+  resetPageKey?: string;
   onSelect: (id: string, shiftKey: boolean) => void;
   onSelectAll: (ids: string[]) => void;
   onClearAll: () => void;
@@ -52,6 +55,7 @@ export default function CustomerTable({
   isTeam = false,
   customerStatuses = {},
   assignedCustomerIds,
+  resetPageKey,
   onSelect,
   onSelectAll,
   onClearAll,
@@ -64,11 +68,19 @@ export default function CustomerTable({
   const [page, setPage] = useState(1);
   const lastClickedIndex = useRef<number | null>(null);
 
-  // Reset to page 1 whenever the filtered customer list changes
+  // Reset to page 1 when the filters/search actually change.
   useEffect(() => {
     setPage(1);
     lastClickedIndex.current = null;
-  }, [customers]);
+  }, [resetPageKey]);
+
+  // On a plain data refresh (e.g. after a status update) keep the user on their
+  // current page — only clamp back if that page no longer exists.
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(customers.length / PAGE_SIZE));
+    setPage((p) => Math.min(p, maxPage));
+    lastClickedIndex.current = null;
+  }, [customers.length]);
 
   const handleSort = (field: SortField) => {
     if (field === sortField) {
