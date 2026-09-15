@@ -283,7 +283,7 @@ export default function FilterPanel({
                       </button>
                     );
                   })()}
-                  {(['ordered', 'awaiting_order', 'pending', 'dormant', 'lost', 'closed'] as CustomerStatusType[]).map((s) => {
+                  {(['ordered', 'awaiting_order', 'pending', 'seasonal', 'dormant', 'lost', 'closed'] as CustomerStatusType[]).map((s) => {
                     const cfg = STATUS_CONFIG[s];
                     const selected = statusFilter.has(s);
                     return (

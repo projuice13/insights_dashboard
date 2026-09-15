@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { CustomerStatusType } from '@/lib/types';
 
 const VALID_STATUSES: CustomerStatusType[] = [
-  'ordered', 'awaiting_order', 'pending', 'dormant', 'lost', 'closed',
+  'ordered', 'awaiting_order', 'pending', 'seasonal', 'dormant', 'lost', 'closed',
 ];
 
 /**

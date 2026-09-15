@@ -14,7 +14,7 @@ interface Props {
 }
 
 const STATUS_ORDER: CustomerStatusType[] = [
-  'ordered', 'awaiting_order', 'pending', 'dormant', 'lost', 'closed',
+  'ordered', 'awaiting_order', 'pending', 'seasonal', 'dormant', 'lost', 'closed',
 ];
 
 export default function StatusModal({

@@ -70,6 +70,7 @@ export type CustomerStatusType =
   | 'ordered'
   | 'awaiting_order'
   | 'pending'
+  | 'seasonal'
   | 'dormant'
   | 'lost'
   | 'closed';
@@ -83,6 +84,7 @@ export const STATUS_CONFIG: Record<
   ordered:        { label: 'Ordered',        bg: 'bg-green-50',   text: 'text-green-700',   ring: 'ring-green-200',   dot: 'bg-green-500'  },
   awaiting_order: { label: 'Awaiting Order', bg: 'bg-blue-50',    text: 'text-blue-700',    ring: 'ring-blue-200',    dot: 'bg-blue-500'   },
   pending:        { label: 'Pending',        bg: 'bg-purple-50',  text: 'text-purple-700',  ring: 'ring-purple-200',  dot: 'bg-purple-500' },
+  seasonal:       { label: 'Seasonal',       bg: 'bg-teal-50',    text: 'text-teal-700',    ring: 'ring-teal-200',    dot: 'bg-teal-500'   },
   dormant:        { label: 'Dormant',        bg: 'bg-slate-50',   text: 'text-slate-700',   ring: 'ring-slate-200',   dot: 'bg-slate-500'  },
   lost:           { label: 'Lost',           bg: 'bg-red-50',     text: 'text-red-700',     ring: 'ring-red-200',     dot: 'bg-red-500'    },
   closed:         { label: 'Closed',         bg: 'bg-stone-100',  text: 'text-stone-700',   ring: 'ring-stone-200',   dot: 'bg-stone-500'  },

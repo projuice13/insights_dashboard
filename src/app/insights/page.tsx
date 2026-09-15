@@ -48,7 +48,7 @@ export default async function AdminPage() {
   const churnRows = await prisma.churnEmailContact.findMany({ select: { customerId: true } });
   const churnEmailIds = churnRows.map((r) => r.customerId);
 
-  // Customer status tags (ordered, awaiting_order, pending, dormant, lost, closed)
+  // Customer status tags (ordered, awaiting_order, pending, seasonal, dormant, lost, closed)
   const statusRows = await prisma.customerStatus.findMany({
     include: {
       setBy: { select: { name: true } },

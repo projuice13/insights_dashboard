@@ -75,7 +75,7 @@ export default function Dashboard({
   const [assignedToMe, setAssignedToMe] = useState(true); // team default: on
   // Default: all statuses selected EXCEPT 'closed'
   const [statusFilter, setStatusFilter] = useState<Set<StatusFilterValue>>(
-    () => new Set<StatusFilterValue>(['active', 'ordered', 'awaiting_order', 'pending', 'dormant', 'lost']),
+    () => new Set<StatusFilterValue>(['active', 'ordered', 'awaiting_order', 'pending', 'seasonal', 'dormant', 'lost']),
   );
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -99,7 +99,7 @@ export default function Dashboard({
 
   // Helper: default state of the status filter (used to detect "deviation from default")
   const DEFAULT_STATUS_FILTER: ReadonlySet<StatusFilterValue> = new Set<StatusFilterValue>([
-    'active', 'ordered', 'awaiting_order', 'pending', 'dormant', 'lost',
+    'active', 'ordered', 'awaiting_order', 'pending', 'seasonal', 'dormant', 'lost',
   ]);
   const statusFilterIsDefault =
     statusFilter.size === DEFAULT_STATUS_FILTER.size &&
@@ -154,7 +154,7 @@ export default function Dashboard({
     setRiskLevels(new Set());
     setAssignedToFilter('all');
     setAssignedToMe(true);
-    setStatusFilter(new Set(['active', 'ordered', 'awaiting_order', 'pending', 'dormant', 'lost']));
+    setStatusFilter(new Set(['active', 'ordered', 'awaiting_order', 'pending', 'seasonal', 'dormant', 'lost']));
     setChurnEmailOnly(false);
     resetSelection();
   }, []);
