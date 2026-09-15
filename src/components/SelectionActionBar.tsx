@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Customer, Assignments, AdminUser, CustomerStatuses } from '@/lib/types';
 import { exportCustomersCSV } from '@/lib/exportCSV';
 import AssignModal from './AssignModal';
+import BulkNoteModal from './BulkNoteModal';
 
 interface SelectionActionBarProps {
   selected: Set<string>;
@@ -15,6 +16,7 @@ interface SelectionActionBarProps {
   onClear: () => void;
   onAssign?: (ids: string[], user: AdminUser | null) => void;
   onMerge?: (customers: Customer[]) => void;
+  onCommented?: (ids: string[]) => void;
 }
 
 export default function SelectionActionBar({
@@ -27,11 +29,15 @@ export default function SelectionActionBar({
   onClear,
   onAssign,
   onMerge,
+  onCommented,
 }: SelectionActionBarProps) {
   const [pendingUser, setPendingUser] = useState<AdminUser | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteSending, setNoteSending] = useState(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
 
   if (selected.size === 0) return null;
 
@@ -113,6 +119,31 @@ export default function SelectionActionBar({
     }
   };
 
+  const handleConfirmNote = async (text: string) => {
+    if (!text.trim()) return;
+    setNoteSending(true);
+    setNoteError(null);
+    try {
+      const res = await fetch('/api/comments/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerIds: selectedCustomers.map((c) => c.id), text }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNoteError(data.error ?? 'Something went wrong. Please try again.');
+        return;
+      }
+      onCommented?.(data.customerIds ?? selectedCustomers.map((c) => c.id));
+      setNoteOpen(false);
+      onClear();
+    } catch {
+      setNoteError('Could not reach the server. Please try again.');
+    } finally {
+      setNoteSending(false);
+    }
+  };
+
   return (
     <>
       <div className="flex items-center justify-between rounded-lg border border-[#E5E7EB] bg-white px-4 py-3 shadow-sm">
@@ -164,6 +195,16 @@ export default function SelectionActionBar({
           {(onAssign || onMerge) && <div className="h-4 w-px bg-[#E5E7EB]" />}
 
           <button
+            onClick={() => { setNoteError(null); setNoteOpen(true); }}
+            className="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-[#E5E7EB] px-4 py-1.5 text-sm font-medium text-[#6B7280] transition-colors hover:border-[#9CA3AF] hover:text-[#374151]"
+          >
+            <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 3.5H4A1.5 1.5 0 002.5 5v7A1.5 1.5 0 004 13.5h7A1.5 1.5 0 0012.5 12V8M11 2.5l2.5 2.5L8 10.5H5.5V8L11 2.5z" />
+            </svg>
+            Add note
+          </button>
+
+          <button
             onClick={handleDownload}
             disabled={downloading}
             className="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-[#E5E7EB] px-4 py-1.5 text-sm font-medium text-[#6B7280] transition-colors hover:border-[#9CA3AF] hover:text-[#374151] disabled:opacity-50"
@@ -194,6 +235,18 @@ export default function SelectionActionBar({
           onConfirm={handleConfirmAssign}
           onCancel={() => {
             if (!sending) { setPendingUser(null); setSendError(null); }
+          }}
+        />
+      )}
+
+      {noteOpen && (
+        <BulkNoteModal
+          count={selectedCustomers.length}
+          sending={noteSending}
+          error={noteError}
+          onConfirm={handleConfirmNote}
+          onCancel={() => {
+            if (!noteSending) { setNoteOpen(false); setNoteError(null); }
           }}
         />
       )}

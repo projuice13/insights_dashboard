@@ -334,6 +334,10 @@ export default function Dashboard({
     }
   };
 
+  const handleBulkCommented = useCallback((ids: string[]) => {
+    setCustomersWithComments((prev) => new Set([...prev, ...ids]));
+  }, []);
+
   const handleCommentAdded = useCallback((customerId: string) => {
     setCustomersWithComments((prev) => new Set([...prev, customerId]));
   }, []);
@@ -492,6 +496,7 @@ export default function Dashboard({
           onClear={resetSelection}
           onAssign={onAssign}
           onMerge={onMerge ? setMergeCustomers : undefined}
+          onCommented={handleBulkCommented}
         />
 
         {/* Toolbar: filter button + result count | search */}
