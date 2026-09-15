@@ -253,7 +253,7 @@ export default function FilterPanel({
                   className={selectClass}
                 >
                   <option value="unassigned">Unassigned</option>
-                  <option value="all">All customers</option>
+                  <option value="all">All Staff</option>
                   {assignableUsers.map((u) => (
                     <option key={u.id} value={u.name}>{u.name}</option>
                   ))}
