@@ -441,8 +441,8 @@ export default function Dashboard({
   return (
     <div className="min-h-screen bg-[#F9FAFB]">
       <header className="border-b border-[#E5E7EB] bg-white px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="grid grid-cols-3 items-center">
+          <div className="flex items-center gap-3 justify-self-start">
             <Link
               href="/"
               className="inline-flex items-center gap-1 text-xs text-[#9CA3AF] transition-colors hover:text-[#374151]"
@@ -452,11 +452,11 @@ export default function Dashboard({
               </svg>
               Home
             </Link>
-            <h1 className="text-lg font-semibold text-[#111827] tracking-tight">
-              Customer Insights Dashboard
-            </h1>
           </div>
-          <div className="flex items-center gap-2">
+          <h1 className="text-lg font-semibold text-[#111827] tracking-tight justify-self-center text-center">
+            Customer Insights Dashboard
+          </h1>
+          <div className="flex items-center gap-2 justify-self-end">
             <NotificationsMenu
               initialNotifications={notifications}
               customers={customers}
