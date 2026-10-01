@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import {
   CustomerTypeFilter,
   RegionFilter,
-  SpendFilter,
+  SpendBand,
   StatusFilterValue,
   CustomerStatusType,
   STATUS_CONFIG,
@@ -20,8 +20,7 @@ const RISK_OPTIONS: { value: RiskLevel; label: string; active: string; dot: stri
   { value: 'low',    label: 'Low',    active: 'bg-green-50 text-green-700 ring-1 ring-green-200', dot: 'bg-green-500' },
 ];
 
-const SPEND_OPTIONS: { value: SpendFilter; label: string }[] = [
-  { value: 'all',       label: 'All' },
+const SPEND_OPTIONS: { value: SpendBand; label: string }[] = [
   { value: '0-999',     label: '£0 – £999' },
   { value: '1000-1999', label: '£1,000 – £1,999' },
   { value: '2000+',     label: '£2,000+' },
@@ -36,7 +35,7 @@ interface FilterPanelProps {
   customerType: CustomerTypeFilter;
   region: RegionFilter;
   lastOrdered: DateRange;
-  spend: SpendFilter;
+  spendBands: Set<SpendBand>;
   riskLevels: Set<RiskLevel>;
   regions: string[];
   isTeam?: boolean;
@@ -51,7 +50,7 @@ interface FilterPanelProps {
   onCustomerType: (v: CustomerTypeFilter) => void;
   onRegion: (v: RegionFilter) => void;
   onLastOrdered: (v: DateRange) => void;
-  onSpend: (v: SpendFilter) => void;
+  onSpendToggle: (v: SpendBand) => void;
   onRiskToggle: (v: RiskLevel) => void;
   onHideAssigned: (v: boolean) => void;
   onAssignedToMe?: (v: boolean) => void;
@@ -71,7 +70,7 @@ export default function FilterPanel({
   customerType,
   region,
   lastOrdered,
-  spend,
+  spendBands,
   riskLevels,
   regions,
   isTeam = false,
@@ -84,7 +83,7 @@ export default function FilterPanel({
   onCustomerType,
   onRegion,
   onLastOrdered,
-  onSpend,
+  onSpendToggle,
   onRiskToggle,
   onHideAssigned,
   onAssignedToMe,
@@ -181,16 +180,26 @@ export default function FilterPanel({
 
           {/* Total spend */}
           <div>
-            <label className="mb-2 block text-xs font-medium text-[#6B7280]">Total spend</label>
-            <select
-              value={spend}
-              onChange={(e) => onSpend(e.target.value as SpendFilter)}
-              className={selectClass}
-            >
-              {SPEND_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+            <p className="mb-2 text-xs font-medium text-[#6B7280]">Total spend</p>
+            <div className="flex flex-wrap gap-2">
+              {SPEND_OPTIONS.map(({ value, label }) => {
+                const isActive = spendBands.has(value);
+                return (
+                  <button
+                    key={value}
+                    onClick={() => onSpendToggle(value)}
+                    className={`cursor-pointer inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'bg-[#F3F4F6] text-[#374151] ring-1 ring-[#E5E7EB]'
+                        : 'border border-[#E5E7EB] bg-white text-[#9CA3AF] hover:border-[#9CA3AF] hover:text-[#374151]'
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-[#9CA3AF]' : 'bg-[#D1D5DB]'}`} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Churn risk */}

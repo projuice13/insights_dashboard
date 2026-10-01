@@ -7,7 +7,7 @@ import {
   Customer,
   CustomerTypeFilter,
   RegionFilter,
-  SpendFilter,
+  SpendBand,
   Assignments,
   AdminUser,
   CustomerStatuses,
@@ -68,7 +68,7 @@ export default function Dashboard({
   const [customerType, setCustomerType] = useState<CustomerTypeFilter>('standard');
   const [region, setRegion] = useState<RegionFilter>('all');
   const [lastOrdered, setLastOrdered] = useState<DateRange>({ from: null, to: null });
-  const [spend, setSpend] = useState<SpendFilter>('all');
+  const [spendBands, setSpendBands] = useState<Set<SpendBand>>(new Set());
   const [riskLevels, setRiskLevels] = useState<Set<'high' | 'medium' | 'low'>>(new Set());
   // 'all' = default (no filter); 'unassigned' = no assignee; user name = that person's contacts
   const [assignedToFilter, setAssignedToFilter] = useState<string>('all');
@@ -126,14 +126,14 @@ export default function Dashboard({
     if (customerType !== 'standard') count++;
     if (region !== 'all') count++;
     if (lastOrdered.from || lastOrdered.to) count++;
-    if (spend !== 'all') count++;
+    if (spendBands.size > 0) count++;
     if (riskLevels.size > 0) count++;
     if (!isTeam && assignedToFilter !== 'all') count++;
     if (isTeam && !assignedToMe) count++;
     if (!isTeam && !statusFilterIsDefault) count++;
     if (churnEmailOnly) count++;
     return count;
-  }, [customerType, region, lastOrdered, spend, riskLevels, assignedToFilter, assignedToMe, isTeam, statusFilterIsDefault, churnEmailOnly]);
+  }, [customerType, region, lastOrdered, spendBands, riskLevels, assignedToFilter, assignedToMe, isTeam, statusFilterIsDefault, churnEmailOnly]);
 
   // Signature of the active filters/search. Changes here reset pagination to
   // page 1; a plain data refresh (status update etc.) leaves it untouched so
@@ -141,16 +141,16 @@ export default function Dashboard({
   const pageResetKey = useMemo(() => JSON.stringify([
     customerType, region,
     lastOrdered.from?.getTime() ?? null, lastOrdered.to?.getTime() ?? null,
-    spend, Array.from(riskLevels).sort(), assignedToFilter, assignedToMe,
+    Array.from(spendBands).sort(), Array.from(riskLevels).sort(), assignedToFilter, assignedToMe,
     Array.from(statusFilter).sort(), churnEmailOnly, search.trim().toLowerCase(),
-  ]), [customerType, region, lastOrdered, spend, riskLevels, assignedToFilter,
+  ]), [customerType, region, lastOrdered, spendBands, riskLevels, assignedToFilter,
        assignedToMe, statusFilter, churnEmailOnly, search]);
 
   const handleClearAllFilters = useCallback(() => {
     setCustomerType('standard');
     setRegion('all');
     setLastOrdered({ from: null, to: null });
-    setSpend('all');
+    setSpendBands(new Set());
     setRiskLevels(new Set());
     setAssignedToFilter('all');
     setAssignedToMe(true);
@@ -205,10 +205,10 @@ export default function Dashboard({
         if (c.lastOrderDate > endOfDay) return false;
       }
 
-      if (spend !== 'all') {
-        if (spend === '0-999' && c.totalSpend >= 1000) return false;
-        if (spend === '1000-1999' && (c.totalSpend < 1000 || c.totalSpend >= 2000)) return false;
-        if (spend === '2000+' && c.totalSpend < 2000) return false;
+      if (spendBands.size > 0) {
+        const band: SpendBand =
+          c.totalSpend < 1000 ? '0-999' : c.totalSpend < 2000 ? '1000-1999' : '2000+';
+        if (!spendBands.has(band)) return false;
       }
 
       if (riskLevels.size > 0 && !riskLevels.has(c.riskLevel)) return false;
@@ -217,7 +217,7 @@ export default function Dashboard({
 
       return true;
     });
-  }, [customers, customerType, region, lastOrdered, spend, riskLevels,
+  }, [customers, customerType, region, lastOrdered, spendBands, riskLevels,
       assignedToFilter, assignedToMe, isTeam, myAssignedSet, assignments,
       localStatuses, statusFilter, churnEmailOnly, localChurnIds]);
 
@@ -239,6 +239,16 @@ export default function Dashboard({
       const next = new Set(prev);
       if (next.has(level)) next.delete(level);
       else next.add(level);
+      return next;
+    });
+    resetSelection();
+  };
+
+  const handleSpendToggle = (band: SpendBand) => {
+    setSpendBands((prev) => {
+      const next = new Set(prev);
+      if (next.has(band)) next.delete(band);
+      else next.add(band);
       return next;
     });
     resetSelection();
@@ -641,7 +651,7 @@ export default function Dashboard({
         customerType={customerType}
         region={region}
         lastOrdered={lastOrdered}
-        spend={spend}
+        spendBands={spendBands}
         riskLevels={riskLevels}
         regions={allRegions}
         isTeam={isTeam}
@@ -654,7 +664,7 @@ export default function Dashboard({
         onCustomerType={(v) => { setCustomerType(v); resetSelection(); }}
         onRegion={(v) => { setRegion(v); resetSelection(); }}
         onLastOrdered={(v) => { setLastOrdered(v); resetSelection(); }}
-        onSpend={(v) => { setSpend(v); resetSelection(); }}
+        onSpendToggle={handleSpendToggle}
         onRiskToggle={handleRiskToggle}
         onHideAssigned={() => {}}
         onAssignedToMe={(v) => { setAssignedToMe(v); resetSelection(); }}
