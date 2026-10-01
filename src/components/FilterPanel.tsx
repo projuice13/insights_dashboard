@@ -270,8 +270,10 @@ export default function FilterPanel({
               </div>
             )}
 
-            {/* Customer status — admin only (team members always see active + their pending) */}
-            {!isTeam && onStatusToggle && statusFilter && (
+            {/* Customer status — available to admins and team members alike.
+                Team members never see approved-closed customers, so the
+                'Closed' chip is omitted for them. */}
+            {onStatusToggle && statusFilter && (
               <div>
                 <p className="mb-2 text-xs font-medium text-[#6B7280]">Customer status</p>
                 <div className="flex flex-wrap gap-1.5">
@@ -292,7 +294,10 @@ export default function FilterPanel({
                       </button>
                     );
                   })()}
-                  {(['ordered', 'awaiting_order', 'pending', 'seasonal', 'dormant', 'lost', 'closed'] as CustomerStatusType[]).map((s) => {
+                  {((isTeam
+                    ? ['ordered', 'awaiting_order', 'pending', 'seasonal', 'dormant', 'lost']
+                    : ['ordered', 'awaiting_order', 'pending', 'seasonal', 'dormant', 'lost', 'closed']
+                  ) as CustomerStatusType[]).map((s) => {
                     const cfg = STATUS_CONFIG[s];
                     const selected = statusFilter.has(s);
                     return (

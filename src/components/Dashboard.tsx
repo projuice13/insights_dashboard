@@ -130,7 +130,7 @@ export default function Dashboard({
     if (riskLevels.size > 0) count++;
     if (!isTeam && assignedToFilter !== 'all') count++;
     if (isTeam && !assignedToMe) count++;
-    if (!isTeam && !statusFilterIsDefault) count++;
+    if (!statusFilterIsDefault) count++;
     if (churnEmailOnly) count++;
     return count;
   }, [customerType, region, lastOrdered, spendBands, riskLevels, assignedToFilter, assignedToMe, isTeam, statusFilterIsDefault, churnEmailOnly]);
@@ -179,12 +179,11 @@ export default function Dashboard({
       const effectiveStatus: StatusFilterValue =
         cs && cs.approvalStatus === 'approved' ? cs.status : 'active';
       // Approved 'closed' customers are hidden from team users full-stop.
-      // Pending closures are treated as 'active' so they stay visible until resolved.
-      if (isTeam) {
-        if (cs?.status === 'closed' && cs.approvalStatus === 'approved') return false;
-      } else {
-        if (!statusFilter.has(effectiveStatus)) return false;
-      }
+      // Pending closures are treated as 'active' (via effectiveStatus) so they
+      // stay visible until resolved.
+      if (isTeam && cs?.status === 'closed' && cs.approvalStatus === 'approved') return false;
+      // Customer status filter — applies to admins and team members alike.
+      if (!statusFilter.has(effectiveStatus)) return false;
 
       // Team: "Assigned to me" filter
       if (isTeam && assignedToMe && !myAssignedSet.has(c.id)) return false;
