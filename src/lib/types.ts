@@ -140,7 +140,8 @@ export type SortField =
   | 'email'
   | 'totalOrders'
   | 'totalSpend'
-  | 'lastOrderDate';
+  | 'lastOrderDate'
+  | 'status';
 
 export type SortDirection = 'asc' | 'desc';
 

@@ -1,10 +1,32 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Customer, SortField, SortDirection, Assignments, AdminUser, CustomerStatuses } from '@/lib/types';
+import { Customer, SortField, SortDirection, Assignments, AdminUser, CustomerStatus, CustomerStatuses } from '@/lib/types';
 import CustomerRow from './CustomerRow';
 
 const PAGE_SIZE = 50;
+
+// Sort ordering for the Status column, mirroring the status filter chips:
+// No Status (active) first, through to pending closures and Closed last.
+const STATUS_SORT_RANK: Record<string, number> = {
+  active: 0,
+  ordered: 1,
+  awaiting_order: 2,
+  pending: 3,
+  seasonal: 4,
+  dormant: 5,
+  lost: 6,
+  pending_closure: 7,
+  closed: 8,
+};
+
+// Map a customer's status row to its sort rank, matching what the row displays
+// (a pending closure shows as "Pending approval"; no row shows as "No Status").
+const statusSortKey = (cs?: CustomerStatus | null): number => {
+  if (!cs) return STATUS_SORT_RANK.active;
+  if (cs.status === 'closed' && cs.approvalStatus === 'pending') return STATUS_SORT_RANK.pending_closure;
+  return STATUS_SORT_RANK[cs.status] ?? STATUS_SORT_RANK.active;
+};
 
 interface CustomerTableProps {
   customers: Customer[];
@@ -42,7 +64,7 @@ const COLUMNS: Column[] = [
   { key: 'totalOrders',    label: 'Orders',        sortable: true,  align: 'right', colWidth: '60px' },
   { key: 'totalSpend',     label: 'Total Spend',   sortable: true,  align: 'right' },
   { key: 'lastOrderDate',  label: 'Last Order',    sortable: true,  align: 'right' },
-  { key: 'status',         label: 'Status',        sortable: false,                 colWidth: '140px' },
+  { key: 'status',         label: 'Status',        sortable: true,                  colWidth: '140px' },
   { key: 'assigned',       label: 'Assigned',      sortable: false },
 ];
 
@@ -106,6 +128,7 @@ export default function CustomerTable({
         case 'totalOrders':   av = a.totalOrders;                  bv = b.totalOrders;                  break;
         case 'totalSpend':    av = a.totalSpend;                   bv = b.totalSpend;                   break;
         case 'lastOrderDate': av = a.lastOrderDate.getTime();      bv = b.lastOrderDate.getTime();      break;
+        case 'status':        av = statusSortKey(customerStatuses[a.id]); bv = statusSortKey(customerStatuses[b.id]); break;
         default: return 0;
       }
 
@@ -113,7 +136,7 @@ export default function CustomerTable({
       if (av > bv) return sortDir === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [customers, sortField, sortDir]);
+  }, [customers, sortField, sortDir, customerStatuses]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
