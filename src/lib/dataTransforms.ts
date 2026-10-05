@@ -3,56 +3,10 @@ import { matchAndMergeCustomers } from './customerMatcher';
 import { classifyCustomerType } from './volumeClassifier';
 import { calculateChurnRisk } from './churnScoring';
 import { calculateYoY } from './yoyComparison';
+import { parseOrderDate } from './dateParse';
 
-function parseOrderDate(dateStr: string): Date {
-  const today = new Date();
-  const raw = dateStr?.trim();
-  if (!raw) return today;
-
-  // Strip any time component so "30/04/2026 09:30:00" or "2026-04-30T09:30:00" become just the date part
-  const s = raw.split(/[\sT]/)[0];
-
-  let day: number, month: number, year: number;
-
-  // DD/MM/YYYY or DD-MM-YYYY
-  const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (dmy) {
-    day = parseInt(dmy[1], 10);
-    month = parseInt(dmy[2], 10) - 1;
-    year = parseInt(dmy[3], 10);
-    const d = new Date(year, month, day);
-    if (!isNaN(d.getTime())) return d;
-  }
-
-  // YYYY-MM-DD (ISO)
-  const iso = s.match(/^(\d{4})[\/\-](\d{2})[\/\-](\d{2})$/);
-  if (iso) {
-    year = parseInt(iso[1], 10);
-    month = parseInt(iso[2], 10) - 1;
-    day = parseInt(iso[3], 10);
-    const d = new Date(year, month, day);
-    if (!isNaN(d.getTime())) return d;
-  }
-
-  // MM/DD/YYYY fallback (US format)
-  const mdy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
-  if (mdy) {
-    month = parseInt(mdy[1], 10) - 1;
-    day = parseInt(mdy[2], 10);
-    year = parseInt(mdy[3], 10);
-    if (year < 100) year += 2000;
-    const d = new Date(year, month, day);
-    if (!isNaN(d.getTime())) return d;
-  }
-
-  // Last resort — try native parser but use local midnight to avoid UTC shift
-  const native = new Date(s);
-  if (!isNaN(native.getTime())) {
-    return new Date(native.getFullYear(), native.getMonth(), native.getDate());
-  }
-
-  return today;
-}
+// Re-exported for existing importers.
+export { parseOrderDate };
 
 /** Returns the most frequently occurring value in an array. */
 function mostCommon(values: string[]): string {
@@ -66,9 +20,32 @@ function mostCommon(values: string[]): string {
   return best;
 }
 
-/** Stable ID for a customer: normalised name + postcode, so branches stay distinct. */
+/** Per-row ID key: normalised name + postcode, so branches stay distinct. */
 export function makeId(name: string, postcode: string): string {
   return `${name.trim().toLowerCase()}|${postcode.replace(/\s+/g, '').toUpperCase()}`;
+}
+
+/**
+ * A customer's stable ID — the key every assignment, status, comment and
+ * churn-list row is stored against.
+ *
+ * It MUST be a pure function of the group's membership and nothing else:
+ * independent of the order the raw rows arrive in, and unchanged when a new
+ * order lands for an existing customer. We therefore take the lexicographically
+ * smallest per-row `makeId` across the whole group rather than reading it off
+ * whichever order happens to look "most recent" — the latter changes between
+ * page loads (the raw-order query is unordered and the date sort was a no-op),
+ * which silently orphaned assignments when the derived ID drifted.
+ */
+export function canonicalCustomerId(
+  groupOrders: { customer_name: string; postcode: string }[],
+): string {
+  let best: string | null = null;
+  for (const o of groupOrders) {
+    const key = makeId(o.customer_name, o.postcode);
+    if (best === null || key < best) best = key;
+  }
+  return best ?? '';
 }
 
 /**
@@ -95,20 +72,41 @@ export interface MergeMapping {
   canonicalPostcode: string;
 }
 
+/** Rewrite rows whose natural ID has been merged into another customer. */
+function applyMerges(rawOrders: RawOrder[], merges: MergeMapping[]): RawOrder[] {
+  const mergeMap = new Map(merges.map((m) => [m.sourceId, { name: m.canonicalName, postcode: m.canonicalPostcode }]));
+  if (mergeMap.size === 0) return rawOrders;
+  return rawOrders.map((row) => {
+    const canonical = mergeMap.get(makeId(row.customer_name, row.postcode));
+    return canonical ? { ...row, customer_name: canonical.name, postcode: canonical.postcode } : row;
+  });
+}
+
+/**
+ * Maps each raw order (by sales order number) to the stable ID of the customer
+ * it belongs to, applying the same grouping and merge logic as buildCustomers.
+ * Used where we need a customer's ID from a raw order without rebuilding every
+ * customer (e.g. the CSV importer) and by the ID-remap recovery script.
+ */
+export function customerIdByOrderNumber(
+  rawOrders: RawOrder[],
+  merges: MergeMapping[] = [],
+): Map<string, string> {
+  const merged = matchAndMergeCustomers(applyMerges(rawOrders, merges));
+  const map = new Map<string, string>();
+  for (const m of merged) {
+    const id = canonicalCustomerId(m.orders);
+    for (const o of m.orders) map.set(o.sales_order_number, id);
+  }
+  return map;
+}
+
 export function buildCustomers(
   rawOrders: RawOrder[],
   merges: MergeMapping[] = [],
   today: Date = new Date(),
 ): Customer[] {
-  // Remap rows whose natural ID has been merged into another customer
-  const mergeMap = new Map(merges.map((m) => [m.sourceId, { name: m.canonicalName, postcode: m.canonicalPostcode }]));
-  const remapped = mergeMap.size === 0 ? rawOrders : rawOrders.map((row) => {
-    const rowId = makeId(row.customer_name, row.postcode);
-    const canonical = mergeMap.get(rowId);
-    return canonical ? { ...row, customer_name: canonical.name, postcode: canonical.postcode } : row;
-  });
-
-  const merged = matchAndMergeCustomers(remapped);
+  const merged = matchAndMergeCustomers(applyMerges(rawOrders, merges));
 
   return merged.map((m) => {
     const orders: Order[] = m.orders.map((o) => ({
@@ -132,7 +130,9 @@ export function buildCustomers(
     const yoy = calculateYoY(orders, today);
 
     return {
-      id: makeId(m.displayName, m.postcode),
+      // Stable, order-independent identity (see canonicalCustomerId). Display
+      // fields below still follow the most-recent order.
+      id: canonicalCustomerId(m.orders),
       name: m.displayName,
       postcode: m.postcode,
       contactName,

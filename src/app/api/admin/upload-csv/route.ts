@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/db';
-import { makeId } from '@/lib/dataTransforms';
+import { customerIdByOrderNumber } from '@/lib/dataTransforms';
 import { RawOrder } from '@/lib/types';
 
 // Allow up to 60 s on Vercel
@@ -62,8 +62,35 @@ export async function POST(req: NextRequest) {
  * Other status tags (Ordered/Dormant/etc.) are kept untouched as they're informational.
  */
 async function reactivateIfOrdered(newOrders: RawOrder[]) {
+  // A customer's stable ID depends on its whole group, so resolve it against
+  // all current raw orders + merges rather than from each new row alone.
+  const [allRows, mergeRows] = await Promise.all([
+    prisma.rawOrderRow.findMany({ orderBy: { salesOrderNumber: 'asc' } }),
+    prisma.customerMerge.findMany(),
+  ]);
+  const allOrders: RawOrder[] = allRows.map((r) => ({
+    sales_order_number: r.salesOrderNumber,
+    customer_name: r.customerName,
+    postcode: r.postcode,
+    contact_name: r.contactName,
+    primary_email: r.primaryEmail,
+    secondary_email: r.secondaryEmail,
+    order_value: r.orderValue,
+    order_date: r.orderDate,
+  }));
+  const merges = mergeRows.map((m) => ({
+    sourceId: m.sourceId,
+    canonicalName: m.canonicalName,
+    canonicalPostcode: m.canonicalPostcode,
+  }));
+
+  const idByOrder = customerIdByOrderNumber(allOrders, merges);
   const newCustomerIds = Array.from(
-    new Set(newOrders.map((o) => makeId(o.customer_name, o.postcode))),
+    new Set(
+      newOrders
+        .map((o) => idByOrder.get(o.sales_order_number))
+        .filter((id): id is string => Boolean(id)),
+    ),
   );
 
   // Only auto-clear CLOSED status; other tags stay

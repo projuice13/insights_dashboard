@@ -1,4 +1,5 @@
 import { RawOrder } from './types';
+import { parseOrderDate } from './dateParse';
 
 function normalizeName(name: string): string {
   let n = name.toLowerCase();
@@ -89,10 +90,17 @@ export function matchAndMergeCustomers(orders: RawOrder[]): MergedCustomer[] {
   for (const [, indices] of groups) {
     const groupOrders = indices.map((i) => orders[i]);
 
-    // Find most recent order for display name / contact / postcode
-    const sorted = [...groupOrders].sort(
-      (a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime()
-    );
+    // Find most recent order for display name / contact / postcode.
+    // Order dates are UK DD/MM/YYYY strings, so they must be parsed with
+    // parseOrderDate — `new Date("25/09/2026")` is Invalid Date, which made
+    // this sort a no-op and the "most recent" row effectively random.
+    // Tie-break on sales order number so the choice is deterministic when two
+    // orders share the latest date.
+    const sorted = [...groupOrders].sort((a, b) => {
+      const diff = parseOrderDate(b.order_date).getTime() - parseOrderDate(a.order_date).getTime();
+      if (diff !== 0) return diff;
+      return b.sales_order_number.localeCompare(a.sales_order_number);
+    });
     const mostRecent = sorted[0];
 
     // Resolve email: use primary if any row has it, else secondary

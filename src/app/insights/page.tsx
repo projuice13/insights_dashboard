@@ -8,7 +8,7 @@ export default async function AdminPage() {
   const session = await requireAdmin();
 
   const [rows, mergeRows] = await Promise.all([
-    prisma.rawOrderRow.findMany(),
+    prisma.rawOrderRow.findMany({ orderBy: { salesOrderNumber: 'asc' } }),
     prisma.customerMerge.findMany(),
   ]);
   const rawOrders: RawOrder[] = rows.map((r) => ({

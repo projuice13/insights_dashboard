@@ -17,7 +17,7 @@ export default async function MyContactsPage() {
   if (session.role === 'admin') redirect('/');
 
   const [rows, mergeRows] = await Promise.all([
-    prisma.rawOrderRow.findMany(),
+    prisma.rawOrderRow.findMany({ orderBy: { salesOrderNumber: 'asc' } }),
     prisma.customerMerge.findMany(),
   ]);
   const rawOrders: RawOrder[] = rows.map((r) => ({
