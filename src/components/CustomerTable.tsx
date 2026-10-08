@@ -62,7 +62,7 @@ const COLUMNS: Column[] = [
   { key: 'contactName',    label: 'Region',        sortable: true },
   { key: 'postcode',       label: 'Postcode',      sortable: true },
   { key: 'totalOrders',    label: 'Orders',        sortable: true,  align: 'right', colWidth: '60px' },
-  { key: 'totalSpend',     label: 'Total Spend',   sortable: true,  align: 'right' },
+  { key: 'totalSpend',     label: 'Total Spend (last 12 months)', sortable: true,  align: 'right' },
   { key: 'lastOrderDate',  label: 'Last Order',    sortable: true,  align: 'right' },
   { key: 'status',         label: 'Status',        sortable: true,                  colWidth: '140px' },
   { key: 'assigned',       label: 'Assigned',      sortable: false },

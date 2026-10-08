@@ -181,7 +181,7 @@ export default function FilterPanel({
 
           {/* Total spend */}
           <div>
-            <p className="mb-2 text-xs font-medium text-[#6B7280]">Total spend</p>
+            <p className="mb-2 text-xs font-medium text-[#6B7280]">Total spend (last 12 months)</p>
             <div className="flex flex-wrap gap-2">
               {SPEND_OPTIONS.map(({ value, label }) => {
                 const isActive = spendBands.has(value);

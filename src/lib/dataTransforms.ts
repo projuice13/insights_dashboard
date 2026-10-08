@@ -114,7 +114,9 @@ export function buildCustomers(
       value: o.order_value,
     }));
 
-    const totalSpend = orders.reduce((s, o) => s + o.value, 0);
+    // Total spend covers the last 12 months (rolling), not the full history.
+    const spendWindowStart = new Date(today.getFullYear(), today.getMonth() - 12, today.getDate());
+    const totalSpend = orders.reduce((s, o) => s + (o.date >= spendWindowStart ? o.value : 0), 0);
     const sortedOrders = [...orders].sort((a, b) => b.date.getTime() - a.date.getTime());
     const lastOrderDate = sortedOrders[0]?.date ?? today;
 
