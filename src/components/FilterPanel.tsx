@@ -23,7 +23,8 @@ const RISK_OPTIONS: { value: RiskLevel; label: string; active: string; dot: stri
 const SPEND_OPTIONS: { value: SpendBand; label: string }[] = [
   { value: '0-999',     label: '£0 – £999' },
   { value: '1000-1999', label: '£1,000 – £1,999' },
-  { value: '2000+',     label: '£2,000+' },
+  { value: '2000-3999', label: '£2,000 – £3,999' },
+  { value: '4000+',     label: '£4,000+' },
 ];
 
 interface FilterPanelProps {

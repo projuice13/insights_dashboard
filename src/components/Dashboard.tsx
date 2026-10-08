@@ -206,7 +206,10 @@ export default function Dashboard({
 
       if (spendBands.size > 0) {
         const band: SpendBand =
-          c.totalSpend < 1000 ? '0-999' : c.totalSpend < 2000 ? '1000-1999' : '2000+';
+          c.totalSpend < 1000 ? '0-999'
+          : c.totalSpend < 2000 ? '1000-1999'
+          : c.totalSpend < 4000 ? '2000-3999'
+          : '4000+';
         if (!spendBands.has(band)) return false;
       }
 
