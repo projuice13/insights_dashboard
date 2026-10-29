@@ -36,6 +36,7 @@ interface FilterPanelProps {
   customerType: CustomerTypeFilter;
   region: RegionFilter;
   lastOrdered: DateRange;
+  lastUpdated?: DateRange; // admin-only: status last-changed date range
   spendBands: Set<SpendBand>;
   riskLevels: Set<RiskLevel>;
   regions: string[];
@@ -51,6 +52,7 @@ interface FilterPanelProps {
   onCustomerType: (v: CustomerTypeFilter) => void;
   onRegion: (v: RegionFilter) => void;
   onLastOrdered: (v: DateRange) => void;
+  onLastUpdated?: (v: DateRange) => void;
   onSpendToggle: (v: SpendBand) => void;
   onRiskToggle: (v: RiskLevel) => void;
   onHideAssigned: (v: boolean) => void;
@@ -71,6 +73,7 @@ export default function FilterPanel({
   customerType,
   region,
   lastOrdered,
+  lastUpdated,
   spendBands,
   riskLevels,
   regions,
@@ -84,6 +87,7 @@ export default function FilterPanel({
   onCustomerType,
   onRegion,
   onLastOrdered,
+  onLastUpdated,
   onSpendToggle,
   onRiskToggle,
   onHideAssigned,
@@ -178,6 +182,14 @@ export default function FilterPanel({
             <p className="mb-2 text-xs font-medium text-[#6B7280]">Last ordered</p>
             <DateRangePicker value={lastOrdered} onChange={onLastOrdered} />
           </div>
+
+          {/* Last updated — admin only (status last-changed date). */}
+          {!isTeam && lastUpdated && onLastUpdated && (
+            <div>
+              <p className="mb-2 text-xs font-medium text-[#6B7280]">Last updated (status change)</p>
+              <DateRangePicker value={lastUpdated} onChange={onLastUpdated} />
+            </div>
+          )}
 
           {/* Total spend */}
           <div>

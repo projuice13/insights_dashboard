@@ -72,6 +72,8 @@ export default function Dashboard({
   const [customerType, setCustomerType] = useState<CustomerTypeFilter>('standard');
   const [region, setRegion] = useState<RegionFilter>('all');
   const [lastOrdered, setLastOrdered] = useState<DateRange>({ from: null, to: null });
+  // Admin-only: date range over when a customer's status was last changed (setAt).
+  const [lastUpdated, setLastUpdated] = useState<DateRange>({ from: null, to: null });
   const [spendBands, setSpendBands] = useState<Set<SpendBand>>(new Set());
   const [riskLevels, setRiskLevels] = useState<Set<'high' | 'medium' | 'low'>>(new Set());
   // 'all' = default (no filter); 'unassigned' = no assignee; user name = that person's contacts
@@ -130,6 +132,7 @@ export default function Dashboard({
     if (customerType !== 'standard') count++;
     if (region !== 'all') count++;
     if (lastOrdered.from || lastOrdered.to) count++;
+    if (isAdmin && (lastUpdated.from || lastUpdated.to)) count++;
     if (spendBands.size > 0) count++;
     if (riskLevels.size > 0) count++;
     if (!isTeam && assignedToFilter !== 'all') count++;
@@ -137,7 +140,7 @@ export default function Dashboard({
     if (!statusFilterIsDefault) count++;
     if (churnEmailOnly) count++;
     return count;
-  }, [customerType, region, lastOrdered, spendBands, riskLevels, assignedToFilter, assignedToMe, isTeam, statusFilterIsDefault, churnEmailOnly]);
+  }, [customerType, region, lastOrdered, lastUpdated, isAdmin, spendBands, riskLevels, assignedToFilter, assignedToMe, isTeam, statusFilterIsDefault, churnEmailOnly]);
 
   // Signature of the active filters/search. Changes here reset pagination to
   // page 1; a plain data refresh (status update etc.) leaves it untouched so
@@ -145,15 +148,17 @@ export default function Dashboard({
   const pageResetKey = useMemo(() => JSON.stringify([
     customerType, region,
     lastOrdered.from?.getTime() ?? null, lastOrdered.to?.getTime() ?? null,
+    lastUpdated.from?.getTime() ?? null, lastUpdated.to?.getTime() ?? null,
     Array.from(spendBands).sort(), Array.from(riskLevels).sort(), assignedToFilter, assignedToMe,
     Array.from(statusFilter).sort(), churnEmailOnly, search.trim().toLowerCase(),
-  ]), [customerType, region, lastOrdered, spendBands, riskLevels, assignedToFilter,
+  ]), [customerType, region, lastOrdered, lastUpdated, spendBands, riskLevels, assignedToFilter,
        assignedToMe, statusFilter, churnEmailOnly, search]);
 
   const handleClearAllFilters = useCallback(() => {
     setCustomerType('standard');
     setRegion('all');
     setLastOrdered({ from: null, to: null });
+    setLastUpdated({ from: null, to: null });
     setSpendBands(new Set());
     setRiskLevels(new Set());
     setAssignedToFilter('all');
@@ -208,6 +213,23 @@ export default function Dashboard({
         if (c.lastOrderDate > endOfDay) return false;
       }
 
+      // Admin-only: "Last updated" = when the status was last changed (setAt).
+      // Customers with no status row are treated as never updated.
+      if (isAdmin && (lastUpdated.from || lastUpdated.to)) {
+        if (!cs) return false;
+        const updated = new Date(cs.setAt);
+        if (lastUpdated.from && updated < lastUpdated.from) return false;
+        if (lastUpdated.to) {
+          const endOfDay = new Date(
+            lastUpdated.to.getFullYear(),
+            lastUpdated.to.getMonth(),
+            lastUpdated.to.getDate(),
+            23, 59, 59, 999,
+          );
+          if (updated > endOfDay) return false;
+        }
+      }
+
       if (spendBands.size > 0) {
         const band: SpendBand =
           c.totalSpend < 1000 ? '0-999'
@@ -223,7 +245,7 @@ export default function Dashboard({
 
       return true;
     });
-  }, [customers, customerType, region, lastOrdered, spendBands, riskLevels,
+  }, [customers, customerType, region, lastOrdered, lastUpdated, isAdmin, spendBands, riskLevels,
       assignedToFilter, assignedToMe, isTeam, myAssignedSet, assignments,
       localStatuses, statusFilter, churnEmailOnly, localChurnIds]);
 
@@ -658,6 +680,7 @@ export default function Dashboard({
         customerType={customerType}
         region={region}
         lastOrdered={lastOrdered}
+        lastUpdated={lastUpdated}
         spendBands={spendBands}
         riskLevels={riskLevels}
         regions={allRegions}
@@ -671,6 +694,7 @@ export default function Dashboard({
         onCustomerType={(v) => { setCustomerType(v); resetSelection(); }}
         onRegion={(v) => { setRegion(v); resetSelection(); }}
         onLastOrdered={(v) => { setLastOrdered(v); resetSelection(); }}
+        onLastUpdated={(v) => { setLastUpdated(v); resetSelection(); }}
         onSpendToggle={handleSpendToggle}
         onRiskToggle={handleRiskToggle}
         onHideAssigned={() => {}}
