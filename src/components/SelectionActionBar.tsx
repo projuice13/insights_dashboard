@@ -10,6 +10,9 @@ interface SelectionActionBarProps {
   selected: Set<string>;
   customers: Customer[];
   assignments: Assignments;
+  // Admin-only: customerId -> ISO timestamp last assigned. When present, the
+  // export includes a last_assigned_date column.
+  assignedDates?: Record<string, string>;
   users: AdminUser[];
   statuses: CustomerStatuses;
   churnEmailIds: Set<string>;
@@ -23,6 +26,7 @@ export default function SelectionActionBar({
   selected,
   customers,
   assignments,
+  assignedDates,
   users,
   statuses,
   churnEmailIds,
@@ -55,9 +59,9 @@ export default function SelectionActionBar({
         body: JSON.stringify({ customerIds: selectedCustomers.map((c) => c.id) }),
       });
       const latestNotes = res.ok ? await res.json() : {};
-      exportCustomersCSV(selectedCustomers, latestNotes, assignments, statuses, churnEmailIds);
+      exportCustomersCSV(selectedCustomers, latestNotes, assignments, statuses, churnEmailIds, assignedDates);
     } catch {
-      exportCustomersCSV(selectedCustomers, {}, assignments, statuses, churnEmailIds);
+      exportCustomersCSV(selectedCustomers, {}, assignments, statuses, churnEmailIds, assignedDates);
     } finally {
       setDownloading(false);
     }

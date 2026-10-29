@@ -26,6 +26,7 @@ const CHUNK_SIZE = 500;
 interface Props {
   initialCustomers: Customer[] | null;
   initialAssignments: Assignments;
+  assignedDates: Record<string, string>;
   initialCustomersWithComments: string[];
   users: AdminUser[];
   currentUser: { id: string; name: string };
@@ -37,6 +38,7 @@ interface Props {
 export default function AdminDashboardClient({
   initialCustomers,
   initialAssignments,
+  assignedDates,
   initialCustomersWithComments,
   users,
   currentUser,
@@ -202,6 +204,7 @@ export default function AdminDashboardClient({
       <Dashboard
         customers={customers}
         assignments={assignments}
+        assignedDates={assignedDates}
         users={users}
         currentUser={currentUser}
         initialCustomersWithComments={initialCustomersWithComments}

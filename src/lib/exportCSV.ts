@@ -14,7 +14,12 @@ export function exportCustomersCSV(
   assignments: Record<string, string> = {},
   statuses: CustomerStatuses = {},
   churnEmailIds: Set<string> = new Set(),
+  // Admin-only: customerId -> ISO timestamp last assigned. When provided, a
+  // last_assigned_date column is added alongside assigned_to.
+  assignedDates?: Record<string, string>,
 ) {
+  const includeAssignedDate = assignedDates !== undefined;
+
   const headers = [
     'customer_name',
     'email',
@@ -26,6 +31,7 @@ export function exportCustomersCSV(
     'risk_score',
     'risk_level',
     'assigned_to',
+    ...(includeAssignedDate ? ['last_assigned_date'] : []),
     'status',
     'status_note',
     'churn_email_list',
@@ -37,6 +43,7 @@ export function exportCustomersCSV(
   const rows = customers.map((c) => {
     const note = latestNotes[c.id];
     const status = statuses[c.id];
+    const assignedDate = assignedDates?.[c.id];
     return [
       esc(c.name),
       esc(c.email),
@@ -48,6 +55,7 @@ export function exportCustomersCSV(
       c.gapRatio.toFixed(1),
       c.riskLevel,
       assignments[c.id] ? esc(assignments[c.id]) : '""',
+      ...(includeAssignedDate ? [assignedDate ? assignedDate.split('T')[0] : '""'] : []),
       status ? esc(status.status) : '""',
       status?.reason ? esc(status.reason) : '""',
       churnEmailIds.has(c.id) ? 'Yes' : '""',

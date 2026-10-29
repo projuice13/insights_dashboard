@@ -30,6 +30,9 @@ import MergeModal from './MergeModal';
 interface DashboardProps {
   customers: Customer[];
   assignments: Assignments;
+  // Admin-only: customerId -> ISO timestamp the customer was last assigned.
+  // When provided, the CSV export includes a last_assigned_date column.
+  assignedDates?: Record<string, string>;
   users: AdminUser[];
   currentUser: { id: string; name: string };
   initialCustomersWithComments: string[];
@@ -48,6 +51,7 @@ interface DashboardProps {
 export default function Dashboard({
   customers,
   assignments,
+  assignedDates,
   users,
   currentUser,
   initialCustomersWithComments,
@@ -502,6 +506,7 @@ export default function Dashboard({
           selected={selected}
           customers={searched}
           assignments={assignments}
+          assignedDates={assignedDates}
           users={users}
           statuses={localStatuses}
           churnEmailIds={localChurnIds}

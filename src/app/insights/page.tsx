@@ -30,8 +30,10 @@ export default async function AdminPage() {
 
   const assignmentRows = await prisma.assignment.findMany({ include: { user: true } });
   const assignments: Record<string, string> = {};
+  const assignedDates: Record<string, string> = {};
   for (const a of assignmentRows) {
     assignments[a.customerId] = a.user.name;
+    assignedDates[a.customerId] = a.assignedAt.toISOString();
   }
 
   const users = await prisma.user.findMany({
@@ -91,6 +93,7 @@ export default async function AdminPage() {
     <AdminDashboardClient
       initialCustomers={customers}
       initialAssignments={assignments}
+      assignedDates={assignedDates}
       initialCustomersWithComments={customersWithComments}
       users={users}
       currentUser={{ id: session.userId, name: session.name }}
