@@ -17,7 +17,8 @@ interface SelectionActionBarProps {
   statuses: CustomerStatuses;
   churnEmailIds: Set<string>;
   onClear: () => void;
-  onAssign?: (ids: string[], user: AdminUser | null) => void;
+  // Persists the assignment; resolves to true on success, false on failure.
+  onAssign?: (ids: string[], user: AdminUser | null) => Promise<boolean>;
   onMerge?: (customers: Customer[]) => void;
   onCommented?: (ids: string[]) => void;
 }
@@ -68,7 +69,7 @@ export default function SelectionActionBar({
   };
 
   const handleUnassign = () => {
-    onAssign?.(selectedCustomers.map((c) => c.id), null);
+    void onAssign?.(selectedCustomers.map((c) => c.id), null);
     onClear();
   };
 
@@ -84,6 +85,15 @@ export default function SelectionActionBar({
     setSendError(null);
 
     try {
+      // 1. Save the assignments first — never email about something that didn't persist.
+      const saved = await onAssign?.(selectedCustomers.map((c) => c.id), pendingUser);
+      if (saved === false) {
+        setSendError('Could not save the assignment. Nothing was sent — please try again.');
+        return;
+      }
+
+      // 2. Then notify by email. The assignment is already saved, so an email
+      //    failure here is a warning, not a lost assignment.
       const res = await fetch('/api/send-assignment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,14 +116,12 @@ export default function SelectionActionBar({
         }),
       });
 
-      const data = await res.json();
-
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setSendError(data.error ?? 'Something went wrong. Please try again.');
+        setSendError(`Assigned to ${pendingUser.name}, but the notification email could not be sent: ${data.error ?? 'unknown error'}.`);
         return;
       }
 
-      onAssign?.(selectedCustomers.map((c) => c.id), pendingUser);
       setPendingUser(null);
       onClear();
     } catch {

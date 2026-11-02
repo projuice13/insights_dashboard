@@ -122,7 +122,7 @@ export default function AdminDashboardClient({
   }, [router]);
 
   const handleAssign = useCallback(
-    async (ids: string[], user: AdminUser | null) => {
+    async (ids: string[], user: AdminUser | null): Promise<boolean> => {
       setAssignments((prev) => {
         const next = { ...prev };
         if (!user) {
@@ -141,13 +141,24 @@ export default function AdminDashboardClient({
         }
       }
 
-      await fetch('/api/admin/assign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerIds: ids, userId: user?.id ?? null, customerNames }),
-      });
+      try {
+        const res = await fetch('/api/admin/assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerIds: ids, userId: user?.id ?? null, customerNames }),
+        });
+        if (!res.ok) {
+          // Undo the optimistic change by re-syncing from the server.
+          router.refresh();
+          return false;
+        }
+        return true;
+      } catch {
+        router.refresh();
+        return false;
+      }
     },
-    [customers],
+    [customers, router],
   );
 
   const handleMerge = useCallback(async (canonical: Customer, sources: Customer[]) => {

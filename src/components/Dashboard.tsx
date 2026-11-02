@@ -42,7 +42,8 @@ interface DashboardProps {
   // Admin-only — omit these for team users
   importStats?: { imported: number; skipped: number } | null;
   myAssignedIds?: string[]; // team users only — the IDs assigned to them
-  onAssign?: (ids: string[], user: AdminUser | null) => void;
+  // Persists the assignment; resolves to true on success, false on failure.
+  onAssign?: (ids: string[], user: AdminUser | null) => Promise<boolean>;
   onMerge?: (canonical: Customer, sources: Customer[]) => Promise<void>;
   onImport?: (file: File) => void;
   onReset?: () => void;
@@ -304,7 +305,7 @@ export default function Dashboard({
     const user = userId ? users.find((u) => u.id === userId) ?? null : null;
     if (!user) {
       // Unassign — no confirmation needed
-      onAssign([customerId], null);
+      void onAssign([customerId], null);
       return;
     }
     const customer = customers.find((c) => c.id === customerId);
@@ -321,6 +322,15 @@ export default function Dashboard({
     const { customer, user } = pendingAssign;
 
     try {
+      // 1. Save the assignment first — don't email about something that didn't persist.
+      const saved = await onAssign([customer.id], user);
+      if (!saved) {
+        setAssignError('Could not save the assignment. Nothing was sent — please try again.');
+        return;
+      }
+
+      // 2. Then notify by email. The assignment is already saved, so an email
+      //    failure here is a warning, not a lost assignment.
       const res = await fetch('/api/send-assignment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -342,13 +352,12 @@ export default function Dashboard({
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setAssignError(data.error ?? 'Something went wrong. Please try again.');
+        setAssignError(`Assigned to ${user.name}, but the notification email could not be sent: ${data.error ?? 'unknown error'}.`);
         return;
       }
 
-      onAssign([customer.id], user);
       setPendingAssign(null);
     } catch {
       setAssignError('Could not reach the server. Make sure the app is running.');
