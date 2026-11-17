@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/db';
 import { customerIdByOrderNumber } from '@/lib/dataTransforms';
+import { parseOrderDate } from '@/lib/dateParse';
 import { RawOrder } from '@/lib/types';
 
 // Allow up to 60 s on Vercel
@@ -14,7 +15,8 @@ async function requireAdmin() {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin())) {
+  const session = await requireAdmin();
+  if (!session) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -49,19 +51,25 @@ export async function POST(req: NextRequest) {
       })),
     });
 
-    // Auto-reactivate any deactivated customers who appear in the new orders
-    await reactivateIfOrdered(newOrders);
+    // Auto-reactivate any dormant/lost/closed customers who ordered after being tagged
+    await reactivateIfOrdered(newOrders, session.userId);
   }
 
   return NextResponse.json({ imported: newOrders.length, skipped });
 }
 
+// Statuses that mean a customer had gone quiet; a fresh order flips them to 'ordered'.
+const REACTIVATE_FROM = ['dormant', 'lost', 'closed'];
+
 /**
- * If a customer was closed (or had a pending closure request) and a
- * new order has arrived, clear that status — they're clearly still trading.
- * Other status tags (Ordered/Dormant/etc.) are kept untouched as they're informational.
+ * If a customer tagged dormant, lost or closed places an order AFTER that status
+ * was assigned, set their status to 'ordered' — they're clearly trading again.
+ * Only newly-imported orders dated on or after the day the status was set count,
+ * so backdated/historical rows don't wrongly reopen anyone. Closed customers
+ * additionally get the existing reopen notifications and their pending closure
+ * request (if any) is cleared. Other tags are left untouched.
  */
-async function reactivateIfOrdered(newOrders: RawOrder[]) {
+async function reactivateIfOrdered(newOrders: RawOrder[], actingUserId: string) {
   // A customer's stable ID depends on its whole group, so resolve it against
   // all current raw orders + merges rather than from each new row alone.
   const [allRows, mergeRows] = await Promise.all([
@@ -85,32 +93,41 @@ async function reactivateIfOrdered(newOrders: RawOrder[]) {
   }));
 
   const idByOrder = customerIdByOrderNumber(allOrders, merges);
-  const newCustomerIds = Array.from(
-    new Set(
-      newOrders
-        .map((o) => idByOrder.get(o.sales_order_number))
-        .filter((id): id is string => Boolean(id)),
-    ),
-  );
 
-  // Only auto-clear CLOSED status; other tags stay
-  const deactivated = await prisma.customerStatus.findMany({
-    where: {
-      customerId: { in: newCustomerIds },
-      status: 'closed',
-    },
+  // Latest new-order date per customer (local midnight of the order day).
+  const latestNewOrderDate = new Map<string, Date>();
+  for (const o of newOrders) {
+    const id = idByOrder.get(o.sales_order_number);
+    if (!id) continue;
+    const d = parseOrderDate(o.order_date);
+    const prev = latestNewOrderDate.get(id);
+    if (!prev || d > prev) latestNewOrderDate.set(id, d);
+  }
+
+  const newCustomerIds = Array.from(latestNewOrderDate.keys());
+  if (newCustomerIds.length === 0) return;
+
+  const candidates = await prisma.customerStatus.findMany({
+    where: { customerId: { in: newCustomerIds }, status: { in: REACTIVATE_FROM } },
   });
 
-  if (deactivated.length === 0) return;
-
-  const customerIdsToReactivate = deactivated.map((d) => d.customerId);
-
-  const admins = await prisma.user.findMany({
-    where: { role: 'admin' },
-    select: { id: true },
+  // Only reactivate when the order was placed on or after the day the status was set.
+  const toReactivate = candidates.filter((c) => {
+    const orderDate = latestNewOrderDate.get(c.customerId);
+    if (!orderDate) return false;
+    const setDay = new Date(c.setAt.getFullYear(), c.setAt.getMonth(), c.setAt.getDate());
+    return orderDate >= setDay;
   });
+
+  if (toReactivate.length === 0) return;
+
+  const now = new Date();
+  const closedOnes = toReactivate.filter((c) => c.status === 'closed');
+
+  // Reopen notifications apply only to closed customers (reopening a closed
+  // account is notable; a dormant/lost customer re-ordering is routine).
+  const admins = await prisma.user.findMany({ where: { role: 'admin' }, select: { id: true } });
   const adminIds = new Set(admins.map((a) => a.id));
-
   const notifications: {
     userId: string;
     type: string;
@@ -118,8 +135,7 @@ async function reactivateIfOrdered(newOrders: RawOrder[]) {
     customerName: string;
     message: string;
   }[] = [];
-
-  for (const d of deactivated) {
+  for (const d of closedOnes) {
     for (const admin of admins) {
       notifications.push({
         userId: admin.id,
@@ -128,8 +144,8 @@ async function reactivateIfOrdered(newOrders: RawOrder[]) {
         customerName: d.customerName,
         message:
           d.approvalStatus === 'pending'
-            ? `${d.customerName} placed a new order — pending closure request cancelled.`
-            : `${d.customerName} placed a new order — automatically reopened.`,
+            ? `${d.customerName} placed a new order — pending closure request cancelled, status set to Ordered.`
+            : `${d.customerName} placed a new order — reopened and status set to Ordered.`,
       });
     }
     if (d.approvalStatus === 'pending' && !adminIds.has(d.setById)) {
@@ -144,11 +160,22 @@ async function reactivateIfOrdered(newOrders: RawOrder[]) {
   }
 
   await prisma.$transaction([
-    prisma.customerStatus.deleteMany({
-      where: { customerId: { in: customerIdsToReactivate } },
-    }),
+    ...toReactivate.map((c) =>
+      prisma.customerStatus.update({
+        where: { customerId: c.customerId },
+        data: {
+          status: 'ordered',
+          approvalStatus: 'approved',
+          reason: `Auto-set to Ordered — placed an order after being marked ${c.status}.`,
+          setById: actingUserId,
+          setAt: now,
+          approvedById: actingUserId,
+          approvedAt: now,
+        },
+      }),
+    ),
     prisma.notification.deleteMany({
-      where: { type: 'deactivation_request', customerId: { in: customerIdsToReactivate } },
+      where: { type: 'deactivation_request', customerId: { in: closedOnes.map((c) => c.customerId) } },
     }),
     prisma.notification.createMany({ data: notifications }),
   ]);
