@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Auto-reactivate any dormant/lost/closed customers who ordered after being tagged
-    await reactivateIfOrdered(newOrders, session.userId);
+    await reactivateIfOrdered(newOrders, session.userId, session.name);
   }
 
   return NextResponse.json({ imported: newOrders.length, skipped });
@@ -69,7 +69,7 @@ const REACTIVATE_FROM = ['dormant', 'lost', 'closed'];
  * additionally get the existing reopen notifications and their pending closure
  * request (if any) is cleared. Other tags are left untouched.
  */
-async function reactivateIfOrdered(newOrders: RawOrder[], actingUserId: string) {
+async function reactivateIfOrdered(newOrders: RawOrder[], actingUserId: string, actorName: string) {
   // A customer's stable ID depends on its whole group, so resolve it against
   // all current raw orders + merges rather than from each new row alone.
   const [allRows, mergeRows] = await Promise.all([
@@ -178,6 +178,14 @@ async function reactivateIfOrdered(newOrders: RawOrder[], actingUserId: string) 
       where: { type: 'deactivation_request', customerId: { in: closedOnes.map((c) => c.customerId) } },
     }),
     prisma.notification.createMany({ data: notifications }),
+    prisma.customerActivity.createMany({
+      data: toReactivate.map((c) => ({
+        customerId: c.customerId,
+        type: 'status',
+        detail: `Auto-set to Ordered — placed an order after being marked ${c.status}`,
+        actorName,
+      })),
+    }),
   ]);
 }
 

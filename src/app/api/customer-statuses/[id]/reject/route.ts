@@ -42,6 +42,9 @@ export async function POST(
         message: `${session.name} rejected your closure request for ${cs.customerName}.`,
       },
     }),
+    prisma.customerActivity.create({
+      data: { customerId, type: 'status', detail: 'Closure request rejected — status cleared', actorName: session.name },
+    }),
   ]);
 
   return NextResponse.json({ ok: true });

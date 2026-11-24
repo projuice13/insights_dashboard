@@ -55,6 +55,9 @@ export async function POST(
         message: `${session.name} approved your closure request for ${cs.customerName}.`,
       },
     }),
+    prisma.customerActivity.create({
+      data: { customerId, type: 'status', detail: 'Closure approved', actorName: session.name },
+    }),
   ]);
 
   return NextResponse.json({ ok: true });

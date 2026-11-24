@@ -8,6 +8,7 @@ import YoYSummary from './YoYSummary';
 import OrderGapIndicator from './OrderGapIndicator';
 import OrderList from './OrderList';
 import CommentPanel from './CommentPanel';
+import ActivityPanel from './ActivityPanel';
 
 interface SidePanelProps {
   customer: Customer | null;
@@ -24,7 +25,7 @@ interface SidePanelProps {
   onSetStatus?: (customer: Customer) => void;
 }
 
-type Tab = 'data' | 'comments';
+type Tab = 'data' | 'comments' | 'activity';
 
 export default function SidePanel({
   customer,
@@ -125,6 +126,16 @@ export default function SidePanel({
                   <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#FBB03F]" />
                 )}
               </button>
+              <button
+                onClick={() => setTab('activity')}
+                className={`cursor-pointer px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  tab === 'activity'
+                    ? 'border-[#111827] text-[#111827]'
+                    : 'border-transparent text-[#9CA3AF] hover:text-[#6B7280]'
+                }`}
+              >
+                Activity
+              </button>
             </div>
           </div>
           <button
@@ -140,7 +151,7 @@ export default function SidePanel({
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          {tab === 'data' ? (
+          {tab === 'data' && (
             <div className="space-y-6">
               {customer.yoyComparison && <YoYChart yoy={customer.yoyComparison} />}
               {customer.yoyComparison && (
@@ -187,7 +198,8 @@ export default function SidePanel({
                 </div>
               )}
             </div>
-          ) : (
+          )}
+          {tab === 'comments' && (
             <CommentPanel
               customerId={customer.id}
               currentUser={currentUser}
@@ -196,6 +208,7 @@ export default function SidePanel({
               onAllCommentsDeleted={onAllCommentsDeleted}
             />
           )}
+          {tab === 'activity' && <ActivityPanel customerId={customer.id} />}
         </div>
       </div>
 

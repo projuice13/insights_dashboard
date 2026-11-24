@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/db';
-import { CustomerStatusType } from '@/lib/types';
+import { CustomerStatusType, STATUS_CONFIG } from '@/lib/types';
+import { logActivity } from '@/lib/activity';
 
 const VALID_STATUSES: CustomerStatusType[] = [
   'ordered', 'awaiting_order', 'pending', 'seasonal', 'dormant', 'lost', 'closed',
@@ -101,6 +102,11 @@ export async function POST(
         })),
       });
     }
+
+    const detail = needsApproval
+      ? `Closure requested${trimmedReason ? ` — "${trimmedReason}"` : ''}`
+      : `Status set to ${STATUS_CONFIG[status].label}${trimmedReason ? ` — "${trimmedReason}"` : ''}`;
+    await logActivity(customerId, 'status', detail, session.name);
   } catch (err) {
     const code = err && typeof err === 'object' && 'code' in err ? (err as { code: string }).code : null;
 
@@ -163,5 +169,6 @@ export async function DELETE(
   }
 
   await prisma.customerStatus.deleteMany({ where: { customerId } });
+  await logActivity(customerId, 'status', 'Status cleared', session.name);
   return NextResponse.json({ ok: true });
 }

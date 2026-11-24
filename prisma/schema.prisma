@@ -137,3 +137,17 @@ model Comment {
   @@index([customerId])
 }
 
+// Append-only audit log of actions on a customer (status changes, assignment
+// changes). One row per action; keyed by the derived customerId (no FK, like
+// Assignment/CustomerStatus).
+model CustomerActivity {
+  id         String   @id @default(cuid())
+  customerId String
+  type       String   // 'status' | 'assignment'
+  detail     String   // human-readable description of the action
+  actorName  String   // who performed it ('System' for automated actions)
+  createdAt  DateTime @default(now())
+
+  @@index([customerId, createdAt])
+}
+
